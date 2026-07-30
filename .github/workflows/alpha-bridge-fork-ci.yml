@@ -1,0 +1,68 @@
+name: Alpha Bridge exact-SHA CI
+run-name: Alpha Bridge 9a4996d15469
+
+on:
+  push:
+    branches:
+      - evidence/ci-9a4996d15469-4bbf7161610c
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-bridge-9a4996d15469
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Exact candidate validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: 9a4996d15469dbbb6a887d8ff5d8b042a1d37331
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Verify candidate
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "9a4996d15469dbbb6a887d8ff5d8b042a1d37331"
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+
+      - name: "Update Ubuntu package data"
+        shell: bash
+        run: |
+          sudo apt-get update
+
+      - name: "Install Ubuntu dependencies"
+        shell: bash
+        run: |
+          sudo apt-get install -y libopenblas-dev libatlas-base-dev liblapack-dev libgmp-dev libmpfr-dev libsuitesparse-dev ccache libmpc-dev
+
+      - name: "Update pip"
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: "Install Python dependencies"
+        shell: bash
+        run: |
+          python -m pip install --group build --group dev-cli --group test-core --group test-mp --group optional-runtime-deps --group lint
+
+      - name: "Build SciPy"
+        shell: bash
+        run: |
+          spin build --release
+
+      - name: "Run SuperLU tests"
+        shell: bash
+        run: |
+          env MALLOC_PERTURB_=170 spin test -m full -t scipy.sparse.linalg._dsolve.tests.test_linsolve
