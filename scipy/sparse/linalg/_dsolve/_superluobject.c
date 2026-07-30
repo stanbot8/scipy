@@ -12,6 +12,7 @@
 
 #include "_superluobject.h"
 #include <ctype.h>
+#include <stdlib.h>
 
 
 /***********************************************************************
@@ -121,18 +122,37 @@ PyMethodDef SuperLU_methods[] = {
 
 static void SuperLU_dealloc(SuperLUObject * self)
 {
+    PyObject *saved_tracker = NULL;
+    PyObject *factor_tracker = NULL;
+
     Py_XDECREF(self->cached_U);
     Py_XDECREF(self->cached_L);
     Py_XDECREF(self->py_csc_construct_func);
     self->cached_U = NULL;
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
+    if (self->memory_tracker != NULL) {
+        saved_tracker = superlu_swap_thread_memory_tracker(self->memory_tracker);
+        if (saved_tracker == NULL) {
+            abort();
+        }
+    }
     SUPERLU_FREE(self->perm_r);
     SUPERLU_FREE(self->perm_c);
     self->perm_r = NULL;
     self->perm_c = NULL;
     XDestroy_SuperNode_Matrix(&self->L);
     XDestroy_CompCol_Matrix(&self->U);
+    if (saved_tracker != NULL) {
+        factor_tracker = superlu_swap_thread_memory_tracker(saved_tracker);
+        if (factor_tracker == NULL) {
+            abort();
+        }
+        superlu_free_tracked_allocations(factor_tracker);
+        Py_DECREF(saved_tracker);
+        Py_DECREF(factor_tracker);
+        Py_CLEAR(self->memory_tracker);
+    }
     PyObject_Del(self);
 }
 
@@ -725,6 +745,7 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     self->cached_U = NULL;
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
+    self->memory_tracker = NULL;
     self->type = intype;
 
     jmpbuf_ptr = (volatile jmp_buf *)superlu_python_jmpbuf();
