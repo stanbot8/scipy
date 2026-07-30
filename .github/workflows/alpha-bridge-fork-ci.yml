@@ -1,0 +1,78 @@
+name: Alpha Bridge exact-SHA CI
+run-name: Alpha Bridge cabb1c08e574
+
+on:
+  push:
+    branches:
+      - evidence/ci-cabb1c08e574-9fd1b55e4671
+
+permissions:
+  contents: read
+
+concurrency:
+  group: alpha-bridge-cabb1c08e574
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Exact candidate validation
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: cabb1c08e574eda82b4f27010491b69d2e1c5e1b
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Verify candidate
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "cabb1c08e574eda82b4f27010491b69d2e1c5e1b"
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: '3.12'
+
+      - name: "Update Ubuntu package data"
+        shell: bash
+        run: |
+          sudo apt-get update
+
+      - name: "Install Ubuntu dependencies"
+        shell: bash
+        run: |
+          sudo apt-get install -y libopenblas-dev libatlas-base-dev liblapack-dev libgmp-dev libmpfr-dev libsuitesparse-dev ccache libmpc-dev
+
+      - name: "Update pip"
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: "Install Python dependencies"
+        shell: bash
+        run: |
+          python -m pip install --group build --group dev-cli --group test-core --group test-mp --group optional-runtime-deps --group lint
+
+      - name: "Build SciPy"
+        shell: bash
+        run: |
+          spin build --release
+
+      - name: "Run SuperLU tests"
+        shell: bash
+        run: |
+          spin test -m full -t scipy.sparse.linalg._dsolve.tests.test_linsolve
+
+      - name: "Run SciPy lint"
+        shell: bash
+        run: |
+          python tools/linting/lint.py --diff-against f9cea05baaabcd90c43edbe74a1a75678b3e402f
+
+      - name: "Check the candidate diff"
+        shell: bash
+        run: |
+          git diff --check f9cea05baaabcd90c43edbe74a1a75678b3e402f...cabb1c08e574eda82b4f27010491b69d2e1c5e1b
