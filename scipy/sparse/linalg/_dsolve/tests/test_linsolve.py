@@ -742,6 +742,28 @@ class TestSplu:
 
             assert_equal(len(oks), 20)
 
+    @pytest.mark.parametrize("solver", [splu, spilu])
+    @pytest.mark.xfail(IS_WASM, reason="cannot start new thread in Pyodide/WASM")
+    def test_factor_outlives_worker_thread(self, solver):
+        size = 64
+        matrix = scipy.sparse.diags(
+            (-np.ones(size - 1), 2 * np.ones(size), -np.ones(size - 1)),
+            offsets=(-1, 0, 1), format="csc",
+        )
+        rhs = np.ones(size)
+        factors = []
+
+        def worker():
+            factors.append(solver(matrix))
+
+        for _ in range(2):
+            thread = threading.Thread(target=worker)
+            thread.start()
+            thread.join()
+
+        for factor in factors:
+            assert_allclose(matrix @ factor.solve(rhs), rhs, rtol=1e-5)
+
     def test_singular_matrix(self):
         # Test that SuperLU does not print to stdout when a singular matrix is
         # passed. See gh-20993.

@@ -12,6 +12,7 @@
 
 #include "_superluobject.h"
 #include <ctype.h>
+#include <stdlib.h>
 
 
 /***********************************************************************
@@ -121,18 +122,38 @@ PyMethodDef SuperLU_methods[] = {
 
 static void SuperLU_dealloc(SuperLUObject * self)
 {
+    PyObject *thread_memory_dict = NULL;
+    PyObject *factor_memory_dict = NULL;
+
     Py_XDECREF(self->cached_U);
     Py_XDECREF(self->cached_L);
     Py_XDECREF(self->py_csc_construct_func);
     self->cached_U = NULL;
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
+    if (self->memory_dict != NULL) {
+        thread_memory_dict =
+            superlu_python_module_exchange_thread_memory_dict(self->memory_dict);
+        if (thread_memory_dict == NULL) {
+            abort();
+        }
+    }
     SUPERLU_FREE(self->perm_r);
     SUPERLU_FREE(self->perm_c);
     self->perm_r = NULL;
     self->perm_c = NULL;
     XDestroy_SuperNode_Matrix(&self->L);
     XDestroy_CompCol_Matrix(&self->U);
+    if (thread_memory_dict != NULL) {
+        factor_memory_dict =
+            superlu_python_module_exchange_thread_memory_dict(thread_memory_dict);
+        if (factor_memory_dict == NULL) {
+            abort();
+        }
+        Py_DECREF(thread_memory_dict);
+        Py_DECREF(factor_memory_dict);
+        Py_CLEAR(self->memory_dict);
+    }
     PyObject_Del(self);
 }
 
@@ -725,6 +746,7 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     self->cached_U = NULL;
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
+    self->memory_dict = NULL;
     self->type = intype;
 
     jmpbuf_ptr = (volatile jmp_buf *)superlu_python_jmpbuf();
@@ -803,6 +825,11 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     SUPERLU_FREE((void*)etree);
     Destroy_CompCol_Permuted((SuperMatrix*)&AC);
     StatFree((SuperLUStat_t*)&stat);
+
+    self->memory_dict = superlu_python_module_take_thread_memory_dict();
+    if (self->memory_dict == NULL) {
+        goto fail;
+    }
 
     return (PyObject *) self;
 

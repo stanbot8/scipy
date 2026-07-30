@@ -69,6 +69,45 @@ jmp_buf *superlu_python_jmpbuf(void)
     return &g->jmpbuf;
 }
 
+PyObject *superlu_python_module_take_thread_memory_dict(void)
+{
+    SuperLUGlobalObject *g;
+    PyObject *memory_dict;
+    PyObject *replacement;
+
+    g = get_tls_global();
+    if (g == NULL) {
+        return NULL;
+    }
+    replacement = PyDict_New();
+    if (replacement == NULL) {
+        return NULL;
+    }
+    memory_dict = g->memory_dict;
+    g->memory_dict = replacement;
+    return memory_dict;
+}
+
+PyObject *superlu_python_module_exchange_thread_memory_dict(
+    PyObject *memory_dict)
+{
+    SuperLUGlobalObject *g;
+    PyObject *replaced_memory_dict;
+
+    if (!PyDict_Check(memory_dict)) {
+        PyErr_SetString(PyExc_TypeError, "memory tracker must be a dictionary");
+        return NULL;
+    }
+    g = get_tls_global();
+    if (g == NULL) {
+        return NULL;
+    }
+    Py_INCREF(memory_dict);
+    replaced_memory_dict = g->memory_dict;
+    g->memory_dict = memory_dict;
+    return replaced_memory_dict;
+}
+
 void superlu_python_module_abort(char *msg)
 {
     SuperLUGlobalObject *g;

@@ -38,6 +38,7 @@ typedef struct {
     PyObject *cached_U;
     PyObject *cached_L;
     PyObject *py_csc_construct_func;
+    PyObject *memory_dict;
     int type;
 } SuperLUObject;
 
@@ -78,6 +79,9 @@ void XDestroy_CompCol_Permuted(SuperMatrix *);
 void XStatFree(SuperLUStat_t *);
 
 jmp_buf *superlu_python_jmpbuf(void);
+PyObject *superlu_python_module_take_thread_memory_dict(void);
+PyObject *superlu_python_module_exchange_thread_memory_dict(
+    PyObject *memory_dict);
 
 
 /* Custom thread begin/end statements: Numpy versions < 1.9 are not safe
