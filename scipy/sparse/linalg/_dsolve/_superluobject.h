@@ -38,7 +38,7 @@ typedef struct {
     PyObject *cached_U;
     PyObject *cached_L;
     PyObject *py_csc_construct_func;
-    PyObject *memory_tracker;
+    PyObject *memory_dict;
     int type;
 } SuperLUObject;
 
@@ -79,19 +79,10 @@ void XDestroy_CompCol_Permuted(SuperMatrix *);
 void XStatFree(SuperLUStat_t *);
 
 jmp_buf *superlu_python_jmpbuf(void);
-
-/* Per-thread SuperLU state, holding the jmp_buf and the allocation tracker.
- * Returns a borrowed reference, valid until the thread exits, or NULL with an
- * exception set.
- */
-SuperLUGlobalObject *get_tls_global(void);
-
-/* Steals a reference to `tracker`, returns a new reference to the tracker it
- * replaced.  Cannot fail.  See the comment on superlu_free_tracked_allocations
- * for the ownership rules that make this useful.
- */
-PyObject *superlu_swap_memory_tracker(SuperLUGlobalObject *g, PyObject *tracker);
-void superlu_free_tracked_allocations(PyObject *tracker);
+SuperLUGlobalObject *superlu_python_get_global(void);
+PyObject *superlu_python_swap_memory_dict(
+    SuperLUGlobalObject *g, PyObject *replacement);
+void superlu_python_release_memory_dict(PyObject *memory_dict);
 
 
 /* Custom thread begin/end statements: Numpy versions < 1.9 are not safe

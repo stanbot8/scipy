@@ -127,19 +127,7 @@ static void SuperLU_dealloc(SuperLUObject * self)
     self->cached_U = NULL;
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
-    /* The tracker owns L, U, perm_r and perm_c, so freeing it replaces the
-     * SUPERLU_FREE / XDestroy_* calls that used to live here.  Going through
-     * SUPERLU_FREE would be wrong: it consults the *calling* thread's tracker,
-     * so it silently leaks whenever a factor is dropped on a thread other than
-     * the one that built it.
-     *
-     * The tracker is NULL only for an object abandoned by newSuperLUObject's
-     * failure path; Py_gstrf reclaims that memory wholesale instead.
-     */
-    if (self->memory_tracker != NULL) {
-        superlu_free_tracked_allocations(self->memory_tracker);
-        Py_CLEAR(self->memory_tracker);
-    }
+    superlu_python_release_memory_dict(self->memory_dict);
     PyObject_Del(self);
 }
 
@@ -710,6 +698,8 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     static volatile GlobalLU_t static_Glu;
     volatile GlobalLU_t *Glu_ptr;
     volatile jmp_buf *jmpbuf_ptr;
+    SuperLUGlobalObject *g;
+    volatile PyObject *previous_memory_dict;
     SLU_BEGIN_THREADS_DEF;
 
     n = A->ncol;
@@ -732,14 +722,22 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     self->cached_U = NULL;
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
-    /* Py_gstrf attaches the tracker once the factorization has succeeded.  Until
-     * then the allocations below belong to whatever tracker the caller has
-     * installed, and it is the caller's job to reclaim them if we fail.
-     */
-    self->memory_tracker = NULL;
     self->type = intype;
+    self->memory_dict = NULL;
+    g = superlu_python_get_global();
+    if (g == NULL) {
+        PyObject_Del((void *)self);
+        return NULL;
+    }
+    self->memory_dict = PyDict_New();
+    if (self->memory_dict == NULL) {
+        PyObject_Del((void *)self);
+        return NULL;
+    }
 
     jmpbuf_ptr = (volatile jmp_buf *)superlu_python_jmpbuf();
+    previous_memory_dict =
+        superlu_python_swap_memory_dict(g, self->memory_dict);
     if (setjmp(*(jmp_buf*)jmpbuf_ptr)) {
         goto fail;
     }
@@ -815,6 +813,7 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     SUPERLU_FREE((void*)etree);
     Destroy_CompCol_Permuted((SuperMatrix*)&AC);
     StatFree((SuperLUStat_t*)&stat);
+    superlu_python_swap_memory_dict(g, (PyObject *)previous_memory_dict);
 
     return (PyObject *) self;
 
@@ -822,6 +821,7 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     SUPERLU_FREE((void*)etree);
     XDestroy_CompCol_Permuted((SuperMatrix*)&AC);
     XStatFree((SuperLUStat_t*)&stat);
+    superlu_python_swap_memory_dict(g, (PyObject *)previous_memory_dict);
     Py_DECREF(self);
     return NULL;
 }
