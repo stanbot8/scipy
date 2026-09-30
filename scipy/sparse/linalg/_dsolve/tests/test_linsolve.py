@@ -742,6 +742,22 @@ class TestSplu:
 
             assert_equal(len(oks), 20)
 
+    @pytest.mark.xfail(IS_WASM, reason="cannot start new thread in Pyodide/WASM")
+    def test_factor_survives_producer_thread(self):
+        factors = []
+
+        def produce():
+            matrix = csc_array([[4.0, 1.0], [1.0, 3.0]])
+            factors.append(splu(matrix))
+
+        producer = threading.Thread(target=produce)
+        producer.start()
+        producer.join()
+        assert_equal(len(factors), 1)
+        factor = factors.pop()
+        assert_allclose(factor.solve(np.array([5.0, 4.0])), [1.0, 1.0])
+        del factor
+
     def test_singular_matrix(self):
         # Test that SuperLU does not print to stdout when a singular matrix is
         # passed. See gh-20993.
