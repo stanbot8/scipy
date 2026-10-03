@@ -1,0 +1,26 @@
+{
+  "definition_blob_sha1": {
+    ".github/workflows/alpha-bridge-ci-verify.yml": "0588ba302e7a97a9721ae7494f6b9aca053476b6",
+    ".github/workflows/array_api.yml": "51d8d28c78082ddd34638a26edd50f669ef99b69",
+    ".github/workflows/linux_intel_oneAPI.yml": "32da8ae32515838c5c183c3c6f8395b336890347",
+    ".github/workflows/windows_intel_oneAPI.yml": "dc58db75f59ba7e5b03c3f4bb10354ea46c5c6bf"
+  },
+  "definition_sha256": {
+    ".github/workflows/alpha-bridge-ci-verify.yml": "d3dacd19a9c94cd86ca5ba24b075c35f3ff224d155ca5891f3b4325ece933dac",
+    ".github/workflows/array_api.yml": "7f721d16c21e15298be8bf496a30115c455a295b8f04147e8e9031d63f89e29a",
+    ".github/workflows/linux_intel_oneAPI.yml": "5d816dc704eeb73c4f8db7318f09305635a86527a3dd130706ce9d0259596a1c",
+    ".github/workflows/windows_intel_oneAPI.yml": "6d094868ced7ab4c6c1126be831147fa7f63f72a7e041794f045753d4f694f4f"
+  },
+  "generator_sha256": "f238e5d52b0ec5c07f088af203f93698fbdea22a995856dc18c50f5365431353",
+  "schema": "alpha-bridge/fork-ci",
+  "source_branch": "main",
+  "source_commit": "0a50dfe076cb866f93fdb05f3d78f51b6a64040a",
+  "source_repository": "scipy/scipy",
+  "version": 1,
+  "workflows": [
+    ".github/workflows/alpha-bridge-ci-verify.yml",
+    ".github/workflows/array_api.yml",
+    ".github/workflows/linux_intel_oneAPI.yml",
+    ".github/workflows/windows_intel_oneAPI.yml"
+  ]
+}

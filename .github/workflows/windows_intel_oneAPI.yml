@@ -4,11 +4,11 @@ name: Windows tests (MSVC + ifx + OpenBLAS)
 on:
   push:
     branches:
-      - maintenance/**
+    - maintenance/**
   pull_request:
     branches:
-      - main
-      - maintenance/**
+    - main
+    - maintenance/**
   schedule:
   #        ┌───────────── minute (0 - 59)
   #        │  ┌───────────── hour (0 - 23)
@@ -16,90 +16,172 @@ on:
   #        │  │  │  ┌───────────── month (1 - 12 or JAN-DEC)
   #        │  │  │  │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
   #        │  │  │  │ │
-  - cron: "9  9 2/2 * *"
+  - cron: 9  9 2/2 * *
 
 permissions:
-   contents: read  # to fetch code (actions/checkout)
+  contents: read   # to fetch code (actions/checkout)
 
 # The environment variable WINDOWS_HPC_URL
 # store the URL for downloading Intel oneAPI.
 # Reference - https://github.com/oneapi-src/oneapi-ci/blob/b4a96bd1888c130fcb73524d2b77b90f43681cbc/.github/workflows/build_all.yml#L11-L12
 env:
-  WINDOWS_HPC_URL: https://registrationcenter-download.intel.com/akdlm/IRC_NAS/a37c30c3-a846-4371-a85d-603e9a9eb94c/intel-oneapi-hpc-toolkit-2025.0.1.48_offline.exe
+  WINDOWS_HPC_URL: 
+    https://registrationcenter-download.intel.com/akdlm/IRC_NAS/a37c30c3-a846-4371-a85d-603e9a9eb94c/intel-oneapi-hpc-toolkit-2025.0.1.48_offline.exe
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name != 'schedule' && (true) }}
 
 jobs:
   get_commit_message:
     name: Get commit message
     uses: ./.github/workflows/commit_message.yml
 
+    needs:
+    - alpha_bridge_inputs
+    if: ${{ (success()) && needs.alpha_bridge_inputs.outputs.changed == 'true' 
+      }}
   msvc_ifx_blas:
     name: py3.12, spin
-    needs: get_commit_message
+    needs:
     # Ensure (a) this doesn't run on forks by default, and
     #        (b) it does run with Act locally (`github` doesn't exist there)
-    if: >
-      needs.get_commit_message.outputs.message == 1
-      && (github.repository == 'scipy/scipy' || github.repository == '')
+    - get_commit_message
+    - alpha_bridge_inputs
+    if: >-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
+      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
+      == 'true' }}
     runs-on: windows-2022
     defaults:
       run:
         shell: powershell
     steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: recursive
-          persist-credentials: false
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
+      with:
+        submodules: recursive
+        persist-credentials: false
 
-      - name: cache install
-        id: cache-install
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-              C:\Program Files (x86)\Intel\oneAPI\compiler
-              C:\Program Files (x86)\Intel\oneAPI\setvars.bat
-              C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat
-          key: install-${{ env.WINDOWS_HPC_URL }}-compiler
-      - name: Install oneAPI HPC kit
-        if: steps.cache-install.outputs.cache-hit != 'true'
-        shell: cmd /C call {0}  # need to use `cmd` for batch scripts
-        run: |
-          echo %WINDOWS_HPC_URL%
-          tools\intel_oneAPI\install_intel_oneAPI_windows.bat "%WINDOWS_HPC_URL%" "" "dfbf8487f6ee5b9c1bb2cad19f2ef8dd842529a533670ce21582d39c303bf979"  &REM 2025.0.1.48
+    - name: cache install
+      id: cache-install
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9   # v6.1.0
+      with:
+        path: |
+          C:\Program Files (x86)\Intel\oneAPI\compiler
+          C:\Program Files (x86)\Intel\oneAPI\setvars.bat
+          C:\Program Files (x86)\Intel\oneAPI\setvars-vcvarsall.bat
+        key: install-${{ env.WINDOWS_HPC_URL }}-compiler
+    - name: Install oneAPI HPC kit
+      if: steps.cache-install.outputs.cache-hit != 'true'
+      shell: cmd /C call {0}    # need to use `cmd` for batch scripts
+      run: |
+        echo %WINDOWS_HPC_URL%
+        tools\intel_oneAPI\install_intel_oneAPI_windows.bat "%WINDOWS_HPC_URL%" "" "dfbf8487f6ee5b9c1bb2cad19f2ef8dd842529a533670ce21582d39c303bf979"  &REM 2025.0.1.48
 
-      - name: Setup Conda
-        uses: conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb # v4.1.0
-        with:
-          python-version: 3.12
-          channels: conda-forge
-          channel-priority: strict
-          use-only-tar-bz2: false
-          miniforge-variant: Miniforge3
-          miniforge-version: latest
-          auto-activate-base: true
-          activate-environment: true
+    - name: Setup Conda
+      uses: 
+        conda-incubator/setup-miniconda@be893c923ea9cf1cf7cd510fbdde27c7e18cbdcb       # v4.1.0
+      with:
+        python-version: 3.12
+        channels: conda-forge
+        channel-priority: strict
+        use-only-tar-bz2: false
+        miniforge-variant: Miniforge3
+        miniforge-version: latest
+        auto-activate-base: true
+        activate-environment: true
 
-      - run: conda --version
-      - run: which python
+    - run: conda --version
+    - run: which python
 
-      - name: Install packages from conda
-        shell: pwsh
-        run: conda install -c conda-forge pkg-config meson meson-python ninja openblas libblas=*=*openblas numpy==2.0 cython pybind11 pytest pytest-xdist pytest-timeout pooch spin hypothesis "click<8.3.0"
+    - name: Install packages from conda
+      shell: pwsh
+      run: conda install -c conda-forge pkg-config meson meson-python ninja 
+        openblas libblas=*=*openblas numpy==2.0 cython pybind11 pytest 
+        pytest-xdist pytest-timeout pooch spin hypothesis "click<8.3.0"
 
       # MSVC is unable to compile Pythran code, therefore we need to use
       # -C-Duse-pythran=false while building SciPy.
       # Reference - https://github.com/serge-sans-paille/pythran/issues/2215
-      - name: Initialise Intel oneAPI, MSVC and Build SciPy
-        shell: cmd /C call {0}  # need to use `cmd` for batch scripts
-        run: |
-          call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          spin build -S-Duse-pythran=false -S--vsenv
+    - name: Initialise Intel oneAPI, MSVC and Build SciPy
+      shell: cmd /C call {0}    # need to use `cmd` for batch scripts
+      run: |
+        call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        spin build -S-Duse-pythran=false -S--vsenv
 
-      - name: Test scipy.datasets
-        shell: pwsh
-        run: spin test -s datasets
+    - name: Test scipy.datasets
+      shell: pwsh
+      run: spin test -s datasets
+  alpha_bridge_inputs:
+    name: AlphaBridge input check
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    concurrency:
+      group: alpha-bridge-inputs-${{ github.workflow }}-${{ github.sha }}-${{ 
+        github.event.schedule || github.event_name }}
+      cancel-in-progress: false
+    outputs:
+      changed: ${{ steps.identity.outputs.changed }}
+    steps:
+    - id: identity
+      name: Check source, workflow, variables, and runner inputs
+      env:
+        GH_TOKEN: ${{ github.token }}
+        AB_REPOSITORY: ${{ github.repository }}
+        AB_RUN_ID: ${{ github.run_id }}
+        AB_HEAD_SHA: ${{ github.sha }}
+        AB_EVENT: ${{ github.event_name }}
+        AB_SCHEDULE: ${{ github.event.schedule || '' }}
+        AB_VARIABLES: ${{ toJSON(vars) }}
+        AB_INPUTS: ${{ toJSON(inputs) }}
+      shell: bash
+      run: "python3 - <<'ALPHA_BRIDGE_CI_PY'\n\"\"\"Native scheduled-CI input check,
+        embedded in the owned fork configuration.\"\"\"\n\nfrom __future__ import
+        annotations\n\nimport hashlib\nimport json\nimport os\nimport urllib.parse\n\
+        import urllib.request\n\n\ndef changed(get, *, repository, run_id, identity,
+        job_name):\n    current = get(f\"/repos/{repository}/actions/runs/{run_id}\"\
+        )\n    event = current[\"event\"]\n    query = urllib.parse.urlencode(\n \
+        \       {\n            \"head_sha\": current[\"head_sha\"],\n            \"\
+        event\": event,\n            \"per_page\": 100,\n        }\n    )\n    runs
+        = get(f\"/repos/{repository}/actions/workflows/{current['workflow_id']}/runs?{query}\"\
+        )\n    for run in runs[\"workflow_runs\"]:\n        if run[\"id\"] == run_id:\n\
+        \            continue\n        if run.get(\"head_sha\") != current[\"head_sha\"\
+        ] or run.get(\"event\") != event:\n            raise ValueError(\"provider
+        returned a different CI input identity\")\n        page = 1\n        while
+        True:\n            jobs = get(\n                f\"/repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100&page={page}\"\
+        \n            )[\"jobs\"]\n            for job in jobs:\n                if
+        (\n                    job[\"name\"] == job_name\n                    and
+        job.get(\"status\") == \"completed\"\n                    and job.get(\"conclusion\"\
+        ) == \"success\"\n                    and any(\n                        step[\"\
+        name\"] == f\"AlphaBridge input identity {identity}\"\n                  \
+        \      and step.get(\"conclusion\") == \"success\"\n                     \
+        \   for step in job.get(\"steps\", [])\n                    )\n          \
+        \      ):\n                    return False\n            if len(jobs) < 100:\n\
+        \                break\n            page += 1\n    return True\n\n\ndef main():\n\
+        \    inputs = {\n        \"configuration_commit\": os.environ[\"AB_HEAD_SHA\"\
+        ],\n        \"event\": os.environ[\"AB_EVENT\"],\n        \"schedule\": os.environ[\"\
+        AB_SCHEDULE\"],\n        \"variables\": json.loads(os.environ[\"AB_VARIABLES\"\
+        ]),\n        \"inputs\": json.loads(os.environ[\"AB_INPUTS\"]),\n        \"\
+        runner_image\": [os.environ.get(\"ImageOS\", \"\"), os.environ.get(\"ImageVersion\"\
+        , \"\")],\n    }\n    identity = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()\n\
+        \n    def get(path):\n        request = urllib.request.Request(\n        \
+        \    \"https://api.github.com\" + path,\n            headers={\n         \
+        \       \"Authorization\": \"Bearer \" + os.environ[\"GH_TOKEN\"],\n     \
+        \           \"Accept\": \"application/vnd.github+json\",\n               \
+        \ \"X-GitHub-Api-Version\": \"2026-03-10\",\n            },\n        )\n \
+        \       with urllib.request.urlopen(request, timeout=60) as response:\n  \
+        \          return json.load(response)\n\n    should_run = inputs[\"event\"\
+        ] != \"schedule\" or changed(\n        get,\n        repository=os.environ[\"\
+        AB_REPOSITORY\"],\n        run_id=int(os.environ[\"AB_RUN_ID\"]),\n      \
+        \  identity=identity,\n        job_name=\"AlphaBridge input check\",\n   \
+        \ )\n    with open(os.environ[\"GITHUB_OUTPUT\"], \"a\", encoding=\"utf-8\"\
+        ) as output:\n        output.write(f\"digest={identity}\\nchanged={str(should_run).lower()}\\\
+        n\")\n    print(\"CI inputs changed\" if should_run else \"CI inputs unchanged;
+        build and test jobs skipped\")\n\n\nif __name__ == \"__main__\":\n    main()\n\
+        \nALPHA_BRIDGE_CI_PY\n"
+    - name: AlphaBridge input identity ${{ steps.identity.outputs.digest }}
+      run: echo 'Input identity recorded'
