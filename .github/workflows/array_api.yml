@@ -8,8 +8,14 @@ on:
     branches:
     - main
     - maintenance/**
-  schedule: -
-    cron: 47 11 2/2 * *
+  schedule:
+  #        ┌───────────── minute (0 - 59)
+  #        │  ┌───────────── hour (0 - 23)
+  #        │  │  ┌───────────── day of the month (1 - 31)
+  #        │  │  │  ┌───────────── month (1 - 12 or JAN-DEC)
+  #        │  │  │  │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
+  #        │  │  │  │ │
+  - cron: 47 11 2/2 * *
 
 permissions:
   contents: read # to fetch code (actions/checkout)
@@ -48,22 +54,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - tasks:
-          - test-strict
-          - test-torch
-          - test-torch-float32
-          - test-torch-meta
-          - test-dask
-          - test-mparray
-          environments:
-          - array-api-strict
-          - torch-cpu
-          - dask-cpu
-          - mparray
-        - tasks:
-          - test-jax
-          environments:
-          - jax-cpu
+        - tasks: [test-strict, test-torch, test-torch-float32, test-torch-meta, 
+              test-dask, test-mparray]
+          environments: [array-api-strict, torch-cpu, dask-cpu, mparray]
+        - tasks: [test-jax]
+          environments: [jax-cpu]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
       with:
@@ -123,7 +118,7 @@ jobs:
         AB_RUN_ID: ${{ github.run_id }}
         AB_HEAD_SHA: b8c4a2195aafc7759cb65ea73c6e530e3dd3f459
         AB_WORKFLOW_DIGEST: 
-          7ce4762c042c35deb4ea8914c222d3119d7e1b35d37f3a106a2e866620bf2705
+          919de1401d385a74330358ae58fb4b00ba729c1dd7154a931f8a5abbe086805e
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}

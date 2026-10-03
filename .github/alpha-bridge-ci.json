@@ -1,17 +1,17 @@
 {
   "definition_blob_sha1": {
     ".github/workflows/alpha-bridge-ci-verify.yml": "21051178fb840f31162cde1a64943007a2178f3f",
-    ".github/workflows/array_api.yml": "06caac7959fb8ad75e81cf72f5cbb08ec8191f0b",
-    ".github/workflows/linux_intel_oneAPI.yml": "8844fd85ab8639e518128f47eae510f32d7ae294",
-    ".github/workflows/windows_intel_oneAPI.yml": "0d93da495ce8ee4502317dfc728ec98468d50985"
+    ".github/workflows/array_api.yml": "4731823b500019d92decc1fd49d25e0edbe72a7c",
+    ".github/workflows/linux_intel_oneAPI.yml": "748367b0cd37160ff2f3042d0fbda96451d2fbdd",
+    ".github/workflows/windows_intel_oneAPI.yml": "8d2fdde57ef9816da8534afb8e4bfb8fba669f78"
   },
   "definition_sha256": {
     ".github/workflows/alpha-bridge-ci-verify.yml": "f1d0d506e1faf2ef9e00102fbf464fa1a74203bf3463e623621402b9de9e8a45",
-    ".github/workflows/array_api.yml": "9914b903ee69d3769593e81f0599440a41c1c61b4d9a2f8e5ffabf1453d8d87d",
-    ".github/workflows/linux_intel_oneAPI.yml": "8d8383979b6ae09fd98fe2224f1d5cb06e5b29f755b6d0a83702184fad6a8b06",
-    ".github/workflows/windows_intel_oneAPI.yml": "cf2547392ad2ae5341d2d8a033f9b3591aa30b972ea25f4a4175ad75227134bd"
+    ".github/workflows/array_api.yml": "1fd6c20bbe8a13ea20242e4cf508b52fd3aa9a463b1d34d14f712a2dff2e4480",
+    ".github/workflows/linux_intel_oneAPI.yml": "c5595bef4d31bdc88a0213cbd51219598be2c9b9bfde0b1e26abd9f870865ed5",
+    ".github/workflows/windows_intel_oneAPI.yml": "7a56fa9e6ca60e6a245a91dc3acc61ef686670eb9353a03a576225975e1143fb"
   },
-  "generator_sha256": "d20fb8b8348d1a9a5c6e1057d775b208188196d5c2634d6ec392227f92b995f5",
+  "generator_sha256": "34bc8c1c1eb9b2799c6a06a6f7bd056799561a0342e1ccd9d7ec69c0f000ae82",
   "schema": "alpha-bridge/fork-ci",
   "source_branch": "main",
   "source_commit": "b8c4a2195aafc7759cb65ea73c6e530e3dd3f459",
