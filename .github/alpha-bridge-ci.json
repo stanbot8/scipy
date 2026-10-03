@@ -1,20 +1,20 @@
 {
   "definition_blob_sha1": {
-    ".github/workflows/alpha-bridge-ci-verify.yml": "211d78b275bbb87055d46d18edfc9b309afb7fd3",
-    ".github/workflows/array_api.yml": "541360648eedc40c6ea8a39d8c4f96b3d87226a9",
-    ".github/workflows/linux_intel_oneAPI.yml": "3a3c870da116f59744e97fa3452faa5bce8b27b2",
-    ".github/workflows/windows_intel_oneAPI.yml": "111933568ca87fcd038bb4d38d68fd18f00318be"
+    ".github/workflows/alpha-bridge-ci-verify.yml": "21051178fb840f31162cde1a64943007a2178f3f",
+    ".github/workflows/array_api.yml": "06caac7959fb8ad75e81cf72f5cbb08ec8191f0b",
+    ".github/workflows/linux_intel_oneAPI.yml": "8844fd85ab8639e518128f47eae510f32d7ae294",
+    ".github/workflows/windows_intel_oneAPI.yml": "0d93da495ce8ee4502317dfc728ec98468d50985"
   },
   "definition_sha256": {
-    ".github/workflows/alpha-bridge-ci-verify.yml": "4cac5461d20019fd71bd15ab6e775a433bcfc570d3cc96f9132a4bf68d15c04e",
-    ".github/workflows/array_api.yml": "4792d39909d11a5cba1b5df2dff681776ae4861eafc2d44676c9785cefe04022",
-    ".github/workflows/linux_intel_oneAPI.yml": "b9e4580f4e7aea91ca9b9ee4cd1960b81b33fa19d8cf6c2c1b888fc8ff6f732f",
-    ".github/workflows/windows_intel_oneAPI.yml": "dd30531cd0a4adaf75900f30ba2a7828a7b58c63ca721f3b66ba928d2a1dec88"
+    ".github/workflows/alpha-bridge-ci-verify.yml": "f1d0d506e1faf2ef9e00102fbf464fa1a74203bf3463e623621402b9de9e8a45",
+    ".github/workflows/array_api.yml": "9914b903ee69d3769593e81f0599440a41c1c61b4d9a2f8e5ffabf1453d8d87d",
+    ".github/workflows/linux_intel_oneAPI.yml": "8d8383979b6ae09fd98fe2224f1d5cb06e5b29f755b6d0a83702184fad6a8b06",
+    ".github/workflows/windows_intel_oneAPI.yml": "cf2547392ad2ae5341d2d8a033f9b3591aa30b972ea25f4a4175ad75227134bd"
   },
-  "generator_sha256": "f5fbad0230ba7fa85305a317f424ab1f31bb96ff28ce023a46664fdaad8051c9",
+  "generator_sha256": "d20fb8b8348d1a9a5c6e1057d775b208188196d5c2634d6ec392227f92b995f5",
   "schema": "alpha-bridge/fork-ci",
   "source_branch": "main",
-  "source_commit": "0a50dfe076cb866f93fdb05f3d78f51b6a64040a",
+  "source_commit": "b8c4a2195aafc7759cb65ea73c6e530e3dd3f459",
   "source_repository": "scipy/scipy",
   "version": 1,
   "workflows": [
