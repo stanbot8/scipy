@@ -82,11 +82,14 @@ jobs:
 
     - name: Initialise Intel oneAPI and Build SciPy
       shell: bash -l {0}
-      run: pixi run build-intel
+      run: |-
+        pixi run build-intel
+
 
     - name: Test scipy
       shell: bash -l {0}
-      run: pixi run --environment=test-intel --skip-deps test-intel
+      run: |-
+        pixi run --environment=test-intel --skip-deps test-intel
   alpha_bridge_inputs:
     name: AlphaBridge input check
     runs-on: ubuntu-latest
@@ -108,7 +111,7 @@ jobs:
         AB_RUN_ID: ${{ github.run_id }}
         AB_HEAD_SHA: b8c4a2195aafc7759cb65ea73c6e530e3dd3f459
         AB_WORKFLOW_DIGEST: 
-          795ad1d2416f378dbbe091be43bf7ceeec3ac607d7e83e11459a7edc672ca44d
+          0e6a4c537cd34a2ae62923ee88e3d1c944497d30bfc62bf7241429013d295fbc
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}

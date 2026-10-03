@@ -81,7 +81,9 @@ jobs:
         job_name: ${{ github.job }}
 
     - name: Build
-      run: pixi run build-cpu
+      run: |-
+        pixi run build-cpu
+
 
     - name: Test
       run: |
@@ -118,7 +120,7 @@ jobs:
         AB_RUN_ID: ${{ github.run_id }}
         AB_HEAD_SHA: b8c4a2195aafc7759cb65ea73c6e530e3dd3f459
         AB_WORKFLOW_DIGEST: 
-          919de1401d385a74330358ae58fb4b00ba729c1dd7154a931f8a5abbe086805e
+          9169429e7abfdc3edcd79995fd713bcaee6f40004befa50cd0ba543c5a2df90a
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}

@@ -96,14 +96,17 @@ jobs:
         auto-activate-base: true
         activate-environment: true
 
-    - run: conda --version
-    - run: which python
+    - run: |-
+        conda --version
+    - run: |-
+        which python
+
 
     - name: Install packages from conda
       shell: pwsh
-      run: conda install -c conda-forge pkg-config meson meson-python ninja 
-        openblas libblas=*=*openblas numpy==2.0 cython pybind11 pytest 
-        pytest-xdist pytest-timeout pooch spin hypothesis "click<8.3.0"
+      run: |-
+        conda install -c conda-forge pkg-config meson meson-python ninja openblas libblas=*=*openblas numpy==2.0 cython pybind11 pytest pytest-xdist pytest-timeout pooch spin hypothesis "click<8.3.0"
+
 
       # MSVC is unable to compile Pythran code, therefore we need to use
       # -C-Duse-pythran=false while building SciPy.
@@ -117,7 +120,8 @@ jobs:
 
     - name: Test scipy.datasets
       shell: pwsh
-      run: spin test -s datasets
+      run: |-
+        spin test -s datasets
   alpha_bridge_inputs:
     name: AlphaBridge input check
     runs-on: ubuntu-latest
@@ -139,7 +143,7 @@ jobs:
         AB_RUN_ID: ${{ github.run_id }}
         AB_HEAD_SHA: b8c4a2195aafc7759cb65ea73c6e530e3dd3f459
         AB_WORKFLOW_DIGEST: 
-          a9b8bc725a794d7b8b2c2f2f069303ff6fc594ced4cc1731df04b494c82b93cf
+          75dd67d51f96f62defdfd58dc345071e6bf9eaa22fbae1490b53d5e1a34ff3bf
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}
