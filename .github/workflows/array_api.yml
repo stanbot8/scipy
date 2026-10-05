@@ -66,7 +66,7 @@ jobs:
         persist-credentials: false
 
         ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'f91e22cd3d9e984b8da31f899c755b2a43c60db4' || 
+          'workflow_run') && '8b4175a6cbba602362234f90fe36bee4800d36b7' || 
           github.sha }}
     - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e   # v0.10.2
       with:
@@ -118,9 +118,9 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         AB_REPOSITORY: ${{ github.repository }}
         AB_RUN_ID: ${{ github.run_id }}
-        AB_HEAD_SHA: f91e22cd3d9e984b8da31f899c755b2a43c60db4
+        AB_HEAD_SHA: 8b4175a6cbba602362234f90fe36bee4800d36b7
         AB_WORKFLOW_DIGEST: 
-          c37193ed52f2bb8d3c224509144f6c663dc6f21bd5a85121d92eaf612053e814
+          f86fc52b1fbc18869a32e129a7efc7be1460bcc7464031941e73f59f7a0cd980
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}

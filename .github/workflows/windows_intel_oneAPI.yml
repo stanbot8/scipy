@@ -65,7 +65,7 @@ jobs:
         persist-credentials: false
 
         ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'f91e22cd3d9e984b8da31f899c755b2a43c60db4' || 
+          'workflow_run') && '8b4175a6cbba602362234f90fe36bee4800d36b7' || 
           github.sha }}
     - name: cache install
       id: cache-install
@@ -141,9 +141,9 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         AB_REPOSITORY: ${{ github.repository }}
         AB_RUN_ID: ${{ github.run_id }}
-        AB_HEAD_SHA: f91e22cd3d9e984b8da31f899c755b2a43c60db4
+        AB_HEAD_SHA: 8b4175a6cbba602362234f90fe36bee4800d36b7
         AB_WORKFLOW_DIGEST: 
-          0067785980dddad3e09d0cc7e90bcaf7fa024e08d32ee4224edb06aff3b03c2a
+          c58e85c3e7da3a41b9d9e4c309d03ac6c800953253b79f967e8b33a4e7da6962
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}

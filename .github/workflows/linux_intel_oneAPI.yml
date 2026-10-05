@@ -57,7 +57,7 @@ jobs:
       # Reference https://github.com/easimon/maximize-build-space/blob/master/action.yml
       # see https://github.com/scipy/scipy/issues/23813
         ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'f91e22cd3d9e984b8da31f899c755b2a43c60db4' || 
+          'workflow_run') && '8b4175a6cbba602362234f90fe36bee4800d36b7' || 
           github.sha }}
     - name: Free up disk space
       run: |
@@ -109,9 +109,9 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         AB_REPOSITORY: ${{ github.repository }}
         AB_RUN_ID: ${{ github.run_id }}
-        AB_HEAD_SHA: f91e22cd3d9e984b8da31f899c755b2a43c60db4
+        AB_HEAD_SHA: 8b4175a6cbba602362234f90fe36bee4800d36b7
         AB_WORKFLOW_DIGEST: 
-          6a018f121d3cde5260715ee3f16100181d4500cf98285def1b09c76f80bf06f1
+          679545bd1c1f73930167c79bfaf09e97842b183f2658218a023ff321c25270d9
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}
