@@ -127,12 +127,7 @@ static void SuperLU_dealloc(SuperLUObject * self)
     self->cached_U = NULL;
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
-    SUPERLU_FREE(self->perm_r);
-    SUPERLU_FREE(self->perm_c);
-    self->perm_r = NULL;
-    self->perm_c = NULL;
-    XDestroy_SuperNode_Matrix(&self->L);
-    XDestroy_CompCol_Matrix(&self->U);
+    superlu_python_release_memory_dict(self->memory_dict);
     PyObject_Del(self);
 }
 
@@ -703,6 +698,8 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     static volatile GlobalLU_t static_Glu;
     volatile GlobalLU_t *Glu_ptr;
     volatile jmp_buf *jmpbuf_ptr;
+    SuperLUGlobalObject *g;
+    volatile PyObject *previous_memory_dict;
     SLU_BEGIN_THREADS_DEF;
 
     n = A->ncol;
@@ -726,8 +723,21 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     self->cached_L = NULL;
     self->py_csc_construct_func = NULL;
     self->type = intype;
+    self->memory_dict = NULL;
+    g = superlu_python_get_global();
+    if (g == NULL) {
+        PyObject_Del((void *)self);
+        return NULL;
+    }
+    self->memory_dict = PyDict_New();
+    if (self->memory_dict == NULL) {
+        PyObject_Del((void *)self);
+        return NULL;
+    }
 
     jmpbuf_ptr = (volatile jmp_buf *)superlu_python_jmpbuf();
+    previous_memory_dict =
+        superlu_python_swap_memory_dict(g, self->memory_dict);
     if (setjmp(*(jmp_buf*)jmpbuf_ptr)) {
         goto fail;
     }
@@ -803,6 +813,7 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     SUPERLU_FREE((void*)etree);
     Destroy_CompCol_Permuted((SuperMatrix*)&AC);
     StatFree((SuperLUStat_t*)&stat);
+    superlu_python_swap_memory_dict(g, (PyObject *)previous_memory_dict);
 
     return (PyObject *) self;
 
@@ -810,6 +821,7 @@ PyObject *newSuperLUObject(SuperMatrix * A, PyObject * option_dict,
     SUPERLU_FREE((void*)etree);
     XDestroy_CompCol_Permuted((SuperMatrix*)&AC);
     XStatFree((SuperLUStat_t*)&stat);
+    superlu_python_swap_memory_dict(g, (PyObject *)previous_memory_dict);
     Py_DECREF(self);
     return NULL;
 }

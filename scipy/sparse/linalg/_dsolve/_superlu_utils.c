@@ -57,6 +57,21 @@ static SuperLUGlobalObject *get_tls_global(void)
     return obj;
 }
 
+SuperLUGlobalObject *superlu_python_get_global(void)
+{
+    return get_tls_global();
+}
+
+PyObject *superlu_python_swap_memory_dict(
+    SuperLUGlobalObject *g, PyObject *replacement)
+{
+    PyObject *previous;
+
+    previous = g->memory_dict;
+    g->memory_dict = replacement;
+    return previous;
+}
+
 jmp_buf *superlu_python_jmpbuf(void)
 {
     SuperLUGlobalObject *g;
@@ -166,20 +181,22 @@ void superlu_python_module_free(void *ptr)
 }
 
 
-static void SuperLUGlobal_dealloc(SuperLUGlobalObject *self)
+void superlu_python_release_memory_dict(PyObject *memory_dict)
 {
     PyObject *key, *value;
     Py_ssize_t pos = 0;
 
-    if (self->memory_dict != NULL) {
-        while (PyDict_Next(self->memory_dict, &pos, &key, &value)) {
-            void *ptr;
-            ptr = PyLong_AsVoidPtr(key);
-            PyMem_RawFree(ptr);
+    if (memory_dict != NULL) {
+        while (PyDict_Next(memory_dict, &pos, &key, &value)) {
+            PyMem_RawFree(PyLong_AsVoidPtr(key));
         }
     }
+    Py_XDECREF(memory_dict);
+}
 
-    Py_XDECREF(self->memory_dict);
+static void SuperLUGlobal_dealloc(SuperLUGlobalObject *self)
+{
+    superlu_python_release_memory_dict(self->memory_dict);
     PyObject_Del(self);
 }
 
