@@ -1,4 +1,4 @@
-name: Label PR on Open
+name: "Label PR on Open"
 on:
   pull_request_target:
     types: [opened]
@@ -27,8 +27,8 @@ jobs:
       continue-on-error: true
       if: github.repository == 'scipy/scipy'
       with:
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-        configuration-path: .github/label-filename.yml
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        configuration-path: ".github/label-filename.yml"
     # label based on PR title
     - uses: github/issue-labeler@ccca1e16fcb66762200e616fc29b57b940c1cb67 # v3.5
       if: github.repository == 'scipy/scipy'
@@ -40,8 +40,8 @@ jobs:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
     needs:
     - alpha_bridge_inputs
-    if: ${{ (success()) && needs.alpha_bridge_inputs.outputs.changed == 'true' 
-      }}
+    if: |-
+      ${{ (success()) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
   alpha_bridge_inputs:
     name: CI input check
     runs-on: ubuntu-latest
@@ -67,7 +67,7 @@ jobs:
         AB_REF: ${{ (github.event_name == 'schedule' || github.event_name == 
           'workflow_run') && 'refs/heads/main' || github.ref }}
         AB_WORKFLOW_DIGEST: 
-          71c55ef86eb4f06c55c361eec3aa68129c807e268a0b8810f86ef51f60ea82a4
+          c9385d6c995c21081faa991bba9a01605358db1a7eaf85b1acf4b8ec9fb69881
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}

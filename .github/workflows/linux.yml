@@ -3,19 +3,19 @@ name: Linux tests
 on:
   push:
     branches:
-    - main
-    - maintenance/**
+      - main
+      - maintenance/**
   pull_request:
     branches:
-    - main
-    - maintenance/**
+      - main
+      - maintenance/**
 
 permissions:
   contents: read # to fetch code (actions/checkout)
 
 env:
-  CCACHE_DIR: ${{ github.workspace }}/.ccache
-  CCACHE_MAXSIZE: 250M
+  CCACHE_DIR: "${{ github.workspace }}/.ccache"
+  CCACHE_MAXSIZE: "250M"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -28,424 +28,414 @@ jobs:
     uses: ./.github/workflows/commit_message.yml
 
     needs:
-    - alpha_bridge_inputs
-    if: ${{ (success()) && needs.alpha_bridge_inputs.outputs.changed == 'true' 
-      }}
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (success()) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
   test_meson:
     name: pyrefly (py3.12) & dev deps (py3.15), fast, spin
     needs:
     # If using act to run CI locally the github object does not exist and
     # the usual skipping should not be enforced
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: ['3.12', 3.15-dev]   # this run will use python dev versions when available
+        python-version: ["3.12", "3.15-dev"] # this run will use python dev versions when available
         maintenance-branch:
-        - ${{ contains(((github.event_name == 'schedule' || github.event_name ==
-          'workflow_run') && 'refs/heads/main' || github.ref), 'maintenance/') 
-          || contains(github.base_ref, 'maintenance/') }}
+          - ${{ contains(((github.event_name == 'schedule' || github.event_name 
+            == 'workflow_run') && 'refs/heads/main' || github.ref), 
+            'maintenance/') || contains(github.base_ref, 'maintenance/') }}
         exclude:
-        - maintenance-branch: true
-          python-version: 3.15-dev
+          - maintenance-branch: true
+            python-version: "3.15-dev"
 
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Setup Python
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97   # v7.0.0
-      with:
-        python-version: ${{ matrix.python-version }}
-        allow-prereleases: true
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
 
-    - name: Install Ubuntu dependencies
+      - name: Install Ubuntu dependencies
         # NOTE: not the same OpenBLAS version as in upstream CI (I'm being lazy here)
-      uses: ./.github/apt-get
-      with:
-        packages: >-
-          libopenblas-dev libatlas-base-dev liblapack-dev libgmp-dev libmpfr-dev libsuitesparse-dev
-          ccache libmpc-dev
+        uses: ./.github/apt-get
+        with:
+          packages: >-
+            libopenblas-dev libatlas-base-dev liblapack-dev libgmp-dev
+            libmpfr-dev libsuitesparse-dev ccache libmpc-dev
 
-    - name: Install Python packages
-      if: matrix.python-version == '3.12'
-      run: |
-        python -m pip install --group build --group dev-cli --group test-core --group test-mp --group optional-runtime-deps
+      - name: Install Python packages
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m pip install --group build --group dev-cli --group test-core --group test-mp --group optional-runtime-deps
 
-    - name: Install Python packages from repositories
-      if: matrix.python-version == '3.15-dev'   # this run will use python dev versions when available
-      run: |
-        python -m pip install --group build --group dev-cli --group test-core --group test-mp
-        python -m pip install git+https://github.com/numpy/numpy.git
-        python -m pip install git+https://github.com/serge-sans-paille/pythran.git
-        python -m pip install git+https://github.com/mesonbuild/meson.git
+      - name: Install Python packages from repositories
+        if: matrix.python-version == '3.15-dev' # this run will use python dev versions when available
+        run: |
+          python -m pip install --group build --group dev-cli --group test-core --group test-mp
+          python -m pip install git+https://github.com/numpy/numpy.git
+          python -m pip install git+https://github.com/serge-sans-paille/pythran.git
+          python -m pip install git+https://github.com/mesonbuild/meson.git
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}-${{ matrix.python-version }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}-${{ matrix.python-version }}
 
-    - name: Setup build and install scipy
-      run: |
-        spin build --release
+      - name: Setup build and install scipy
+        run: |
+          spin build --release
 
-    - name: Ccache performance
-      shell: bash -l {0}
-      run: |
-        ccache --evict-older-than 1d
-        ccache -s
+      - name: Ccache performance
+        shell: bash -l {0}
+        run: |
+          ccache --evict-older-than 1d
+          ccache -s
 
-    - name: Check installed files
-      run: |
-        spin check --installed-files --no-build
+      - name: Check installed files
+        run: |
+          spin check --installed-files --no-build
 
-    - name: Check symbol hiding
-      run: |
-        spin check --symbol-hiding --no-build
+      - name: Check symbol hiding
+        run: |
+          spin check --symbol-hiding --no-build
 
-    - name: Check usage of install tags
-      run: |
-        rm -r build-install
-        spin build --tags=runtime,python-runtime,devel
-        python tools/linting/check_installation.py build-install --no-tests
-        rm -r build-install
-        spin build --tags=runtime,python-runtime,devel,tests
-        spin check --installed-files --no-build
+      - name: Check usage of install tags
+        run: |
+          rm -r build-install
+          spin build --tags=runtime,python-runtime,devel
+          python tools/linting/check_installation.py build-install --no-tests
+          rm -r build-install
+          spin build --tags=runtime,python-runtime,devel,tests
+          spin check --installed-files --no-build
 
-    - name: Check xp markers
-      run: |
-        spin check --xp-markers --no-build
+      - name: Check xp markers
+        run: |
+          spin check --xp-markers --no-build
 
-    - name: Check build-internal dependencies
-      run: |-
-        ninja -C build -t missingdeps
+      - name: Check build-internal dependencies
+        run: |-
+          ninja -C build -t missingdeps
 
 
-    - name: Pyrefly
-      if: matrix.python-version == '3.12'
-      run: |
-        python -m pip install --group typecheck
-        pyrefly check --output-format=github
+      - name: Pyrefly
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m pip install --group typecheck
+          pyrefly check --output-format=github
 
-    - name: Report CPU details
-      run: |
-        # Diagnostics for CPU-dependent failures (gh-26286)
-        lscpu
-        spin python --no-build -- -c "import numpy as np; import scipy.linalg; np.show_runtime()"
+      - name: Report CPU details
+        run: |
+          # Diagnostics for CPU-dependent failures (gh-26286)
+          lscpu
+          spin python --no-build -- -c "import numpy as np; import scipy.linalg; np.show_runtime()"
 
-    - name: Test SciPy
-      run: |
-        export OMP_NUM_THREADS=2
-        python -m pip uninstall --yes uarray # avoid deprecation warnings
-        spin test -j3 -- --durations 10 --timeout=60
+      - name: Test SciPy
+        run: |
+          export OMP_NUM_THREADS=2
+          python -m pip uninstall --yes uarray # avoid deprecation warnings
+          spin test -j3 -- --durations 10 --timeout=60
 
   #################################################################################
   test_venv_install:
     name: Install into venv, cluster only, pyAny/npAny, pip+cluster.test()
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Install Ubuntu dependencies
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Install Ubuntu dependencies
         # We're not running the full test suite here, only testing the install
         # into a venv is working, so leave out optional dependencies. That's
         # also why we can get away with an old version of OpenBLAS from Ubuntu
-      uses: ./.github/apt-get
-      with:
-        packages: python3-dev libopenblas-dev pkg-config ccache
+        uses: ./.github/apt-get
+        with:
+          packages: python3-dev libopenblas-dev pkg-config ccache
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}
 
-    - name: Create venv, install SciPy
-      run: |
-        python -m venv ../venvs/scipy-venv
-        source ../venvs/scipy-venv/bin/activate
-        python -m pip install --upgrade pip
-        python -m pip install --group test-core
-        # Note that this uses build isolation. That's why we don't need build
-        # dependencies to be installed in the venv itself.
-        python -m pip install . -vv -Csetup-args=--werror
+      - name: Create venv, install SciPy
+        run: |
+          python -m venv ../venvs/scipy-venv
+          source ../venvs/scipy-venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install --group test-core
+          # Note that this uses build isolation. That's why we don't need build
+          # dependencies to be installed in the venv itself.
+          python -m pip install . -vv -Csetup-args=--werror
 
-    - name: Basic imports and tests
-      run: |
-        source ../venvs/scipy-venv/bin/activate
-        cd ..
-        python -c "import scipy"
-        python -c "import scipy.linalg"
-        python -c "from scipy import cluster; cluster.test()"
+      - name: Basic imports and tests
+        run: |
+          source ../venvs/scipy-venv/bin/activate
+          cd ..
+          python -c "import scipy"
+          python -c "import scipy.linalg"
+          python -c "from scipy import cluster; cluster.test()"
 
-    - name: Create venv inside source tree
+      - name: Create venv inside source tree
         # This is a regression test for gh-16312
-      run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        # Install build dependencies. Use meson-python from its main branch,
-        # most convenient to test in this job because we're using pip without
-        # build isolation here.
-        python -m pip install --upgrade pip
-        python -m pip install --group build --group test-core
-        python -m pip install git+https://github.com/mesonbuild/meson-python.git
-        # Non-isolated build, so we use dependencies installed inside the source tree
-        python -m pip install . -v --no-build-isolation
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          # Install build dependencies. Use meson-python from its main branch,
+          # most convenient to test in this job because we're using pip without
+          # build isolation here.
+          python -m pip install --upgrade pip
+          python -m pip install --group build --group test-core
+          python -m pip install git+https://github.com/mesonbuild/meson-python.git
+          # Non-isolated build, so we use dependencies installed inside the source tree
+          python -m pip install . -v --no-build-isolation
 
-        # Basic tests
-        cd ..
-        python -c "import scipy"
-        python -c "import scipy.linalg"
-        python -c "from scipy import cluster; cluster.test()"
+          # Basic tests
+          cd ..
+          python -c "import scipy"
+          python -c "import scipy.linalg"
+          python -c "from scipy import cluster; cluster.test()"
 
-    - name: Ccache performance
-      shell: bash -l {0}
-      run: |
-        ccache --evict-older-than 1d
-        ccache -s
+      - name: Ccache performance
+        shell: bash -l {0}
+        run: |
+          ccache --evict-older-than 1d
+          ccache -s
 
   #################################################################################
   test_editable_install:
     # Editable installs hit corner cases that regular installs don't, e.g., gh-25892
     name: Editable install, fast, py3.12/npAny, spin
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Setup Python
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97   # v7.0.0
-      with:
-        python-version: '3.12'
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
 
-    - name: Install Ubuntu dependencies
+      - name: Install Ubuntu dependencies
         # apt OpenBLAS rather than the scipy-openblas wheel, because
         # `--with-scipy-openblas` is a `spin build` flag with no `spin install` equivalent
-      uses: ./.github/apt-get
-      with:
-        packages: libopenblas-dev pkg-config ccache
+        uses: ./.github/apt-get
+        with:
+          packages: libopenblas-dev pkg-config ccache
 
-    - name: Install Python packages
-      run: |
-        python -m pip install --group build --group dev-cli --group test-core --group optional-runtime-deps
+      - name: Install Python packages
+        run: |
+          python -m pip install --group build --group dev-cli --group test-core --group optional-runtime-deps
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}
 
-    - name: Editable install
+      - name: Editable install
         # `spin install` defaults to `pip install -e . --no-build-isolation`
-      run: |
-        spin install
+        run: |
+          spin install
 
-    - name: Check import
+      - name: Check import
         # Run from outside the source tree, then check that `scipy` still
         # resolves back to it - that's the point of an editable install.
-      run: |
-        python -c "
-        import os, pathlib, scipy, scipy.linalg
-        expected = pathlib.Path(os.environ['EXPECTED_SCIPY_DIR'])
-        assert pathlib.Path(scipy.__file__).parent == expected, \
-            f'{scipy.__file__=} not from {expected}'"
-      working-directory: ${{ runner.temp }}
-      env:
-        EXPECTED_SCIPY_DIR: ${{ github.workspace }}/scipy
+        run: |
+          python -c "
+          import os, pathlib, scipy, scipy.linalg
+          expected = pathlib.Path(os.environ['EXPECTED_SCIPY_DIR'])
+          assert pathlib.Path(scipy.__file__).parent == expected, \
+              f'{scipy.__file__=} not from {expected}'"
+        working-directory: ${{ runner.temp }}
+        env:
+          EXPECTED_SCIPY_DIR: ${{ github.workspace }}/scipy
 
-    - name: Check rebuild on import
+      - name: Check rebuild on import
         # meson-python reruns ninja on every import of an editable install. Touch a
         # source file (Pythran-compiled here, rather than Cython, but the rebuild
         # hook works the same way) so that hook has actual work to do, then check
         # the compiled extension's mtime to prove a rebuild actually happened -
         # not just that the (possibly stale) module still imports without error.
-      run: |
-        before=$(python -c "
-        import scipy.signal._max_len_seq_inner as m, os
-        print(os.stat(m.__file__).st_mtime_ns)")
-        sleep 1  # ensure a rebuilt file's mtime is unambiguously newer
-        touch "$GITHUB_WORKSPACE/scipy/signal/_max_len_seq_inner.py"
-        after=$(python -c "
-        import scipy.signal, scipy.signal._max_len_seq_inner as m, os
-        assert len(scipy.signal.max_len_seq(4)[0]) == 15
-        print(os.stat(m.__file__).st_mtime_ns)")
-        echo "extension mtime (ns): before=$before after=$after"
-        if [[ "$after" -le "$before" ]]; then
-          echo "::error::extension was not rebuilt on import (mtime unchanged)"
-          exit 1
-        fi
-      working-directory: ${{ runner.temp }}
+        run: |
+          before=$(python -c "
+          import scipy.signal._max_len_seq_inner as m, os
+          print(os.stat(m.__file__).st_mtime_ns)")
+          sleep 1  # ensure a rebuilt file's mtime is unambiguously newer
+          touch "$GITHUB_WORKSPACE/scipy/signal/_max_len_seq_inner.py"
+          after=$(python -c "
+          import scipy.signal, scipy.signal._max_len_seq_inner as m, os
+          assert len(scipy.signal.max_len_seq(4)[0]) == 15
+          print(os.stat(m.__file__).st_mtime_ns)")
+          echo "extension mtime (ns): before=$before after=$after"
+          if [[ "$after" -le "$before" ]]; then
+            echo "::error::extension was not rebuilt on import (mtime unchanged)"
+            exit 1
+          fi
+        working-directory: ${{ runner.temp }}
 
-    - name: Ccache performance
+      - name: Ccache performance
         # After the imports above, since those can trigger a rebuild
-      shell: bash -l {0}
-      run: |
-        ccache --evict-older-than 1d
-        ccache -s
+        shell: bash -l {0}
+        run: |
+          ccache --evict-older-than 1d
+          ccache -s
 
-    - name: Test SciPy
+      - name: Test SciPy
         # `-t scipy` is required: with extra args after `--`, spin does not add a
         # collection target of its own, and for an editable install it also leaves
         # pytest's cwd at the repo root - so pytest would collect the whole checkout.
-      run: |
-        spin test -j3 -t scipy -- --durations 10 --timeout=60
+        run: |
+          spin test -j3 -t scipy -- --durations 10 --timeout=60
 
   #################################################################################
   python_debug:
     # also uses the vcs->sdist->wheel route.
     name: Python-debug & ATLAS & sdist+wheel, fast, py3.12/npMin, pip+pytest
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-24.04 # provides python3.12-dbg
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Configuring Test Environment
-      uses: ./.github/apt-get
-      with:
-        packages: >-
-          python3-dbg python3-dev libatlas-base-dev liblapack-dev libgmp-dev libmpfr-dev
-          libmpc-dev
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Configuring Test Environment
+        uses: ./.github/apt-get
+        with:
+          packages: >-
+            python3-dbg python3-dev libatlas-base-dev liblapack-dev
+            libgmp-dev libmpfr-dev libmpc-dev
 
-    - name: Check python3-dbg
-      run: |
-        python3-dbg --version # just to check
-        python3-dbg -c 'import sys; print("Python debug build:", hasattr(sys, "gettotalrefcount"))'
+      - name: Check python3-dbg
+        run: |
+          python3-dbg --version # just to check
+          python3-dbg -c 'import sys; print("Python debug build:", hasattr(sys, "gettotalrefcount"))'
 
-    - name: Build SciPy
-      run: |
-        python3-dbg -m pip install --upgrade pip
-        python3-dbg -m pip install build
-        # Note: we are testing installion via sdist, so can't use `ccache` in this job
-        python3-dbg -m build -Csetup-args=-Dbuildtype=debugoptimized -Csetup-args=-Dblas=blas-atlas -Csetup-args=-Dlapack=lapack-atlas
-        python3-dbg -m pip install dist/scipy*.whl
+      - name: Build SciPy
+        run: |
+          python3-dbg -m pip install --upgrade pip
+          python3-dbg -m pip install build
+          # Note: we are testing installion via sdist, so can't use `ccache` in this job
+          python3-dbg -m build -Csetup-args=-Dbuildtype=debugoptimized -Csetup-args=-Dblas=blas-atlas -Csetup-args=-Dlapack=lapack-atlas
+          python3-dbg -m pip install dist/scipy*.whl
 
-    - name: Testing SciPy
-      run: |
-        python3-dbg -m pip install --group test
-        cd doc # move out of source root directory
-        python3-dbg -m pytest --pyargs scipy -n4 --durations=10 -m "not slow"
+      - name: Testing SciPy
+        run: |
+          python3-dbg -m pip install --group test
+          cd doc # move out of source root directory
+          python3-dbg -m pytest --pyargs scipy -n4 --durations=10 -m "not slow"
 
   #################################################################################
   gcc10:
     # Purpose is to examine builds with oldest-supported gcc and test with pydata/sparse.
     name: Oldest GCC & pydata/sparse, full, py3.12/npMin, pip+pytest
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Setup Python
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97   # v7.0.0
-      with:
-        python-version: '3.12'
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
 
-    - name: Setup system dependencies
-      uses: ./.github/apt-get
-      with:
-        packages: >-
-          g++-10 gcc-10 libatlas-base-dev liblapack-dev libgmp-dev libmpfr-dev libmpc-dev
-          pkg-config libsuitesparse-dev ccache
+      - name: Setup system dependencies
+        uses: ./.github/apt-get
+        with:
+          packages: >-
+            g++-10 gcc-10 libatlas-base-dev liblapack-dev libgmp-dev
+            libmpfr-dev libmpc-dev pkg-config libsuitesparse-dev ccache
 
-    - name: Setup Python build deps
-      run: |-
-        pip install --group build
+      - name: Setup Python build deps
+        run: |-
+          pip install --group build
 
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}
 
-    - name: Build wheel and install
-      run: |
-        set -euo pipefail
-        export PYTHONOPTIMIZE=2
+      - name: Build wheel and install
+        run: |
+          set -euo pipefail
+          export PYTHONOPTIMIZE=2
 
-        # specify which compilers to use using environment variables
-        CC="ccache gcc-10" CXX="ccache g++-10" python -m pip install . -v \
-            --no-build-isolation -Cbuild-dir=build \
-            -Csetup-args=-Dblas=blas-atlas -Csetup-args=-Dlapack=lapack-atlas
+          # specify which compilers to use using environment variables
+          CC="ccache gcc-10" CXX="ccache g++-10" python -m pip install . -v \
+              --no-build-isolation -Cbuild-dir=build \
+              -Csetup-args=-Dblas=blas-atlas -Csetup-args=-Dlapack=lapack-atlas
 
-    - name: Ccache performance
-      shell: bash -l {0}
-      run: |
-        ccache --evict-older-than 1d
-        ccache -s
+      - name: Ccache performance
+        shell: bash -l {0}
+        run: |
+          ccache --evict-older-than 1d
+          ccache -s
 
-    - name: Install test dependencies
-      run: |
-        pip install --group test
-        # Downgrade numpy to oldest supported version
-        pip install "numpy==2.0.0"
+      - name: Install test dependencies
+        run: |
+          pip install --group test
+          # Downgrade numpy to oldest supported version
+          pip install "numpy==2.0.0"
 
-    - name: Run tests
-      run: |
-        # can't be in source directory
-        pushd $RUNNER_TEMP
-        export PYTHONOPTIMIZE=2
-        python -m pytest --pyargs scipy -n4 --durations=10
-        popd
+      - name: Run tests
+        run: |
+          # can't be in source directory
+          pushd $RUNNER_TEMP
+          export PYTHONOPTIMIZE=2
+          python -m pytest --pyargs scipy -n4 --durations=10
+          popd
 
   #################################################################################
   prerelease_deps_coverage_64bit_blas:
@@ -453,112 +443,108 @@ jobs:
     name: Prerelease deps & coverage report, full, py3.12/npMin & py3.13/npPre, 
       spin, SCIPY_ARRAY_API=1
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12']
+        python-version: ["3.12"]
 
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Setup Python
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97   # v7.0.0
-      with:
-        python-version: ${{ matrix.python-version }}
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install Ubuntu dependencies
-      uses: ./.github/apt-get
-      with:
-        packages: libgmp-dev libmpfr-dev libmpc-dev ccache lcov
+      - name: Install Ubuntu dependencies
+        uses: ./.github/apt-get
+        with:
+          packages: libgmp-dev libmpfr-dev libmpc-dev ccache lcov
 
-    - name: Install Python packages
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install --group build --group dev-cli --group openblas32
-        python -m pip install --pre --upgrade --group coverage
-        python -m pip install --pre --upgrade --timeout=60 -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --group build --group dev-cli --group openblas32
+          python -m pip install --pre --upgrade --group coverage
+          python -m pip install --pre --upgrade --timeout=60 -i https://pypi.anaconda.org/scientific-python-nightly-wheels/simple numpy
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}
 
-    - name: Build and install SciPy
-      run: |
-        spin build --gcov --with-scipy-openblas=32 --release
+      - name: Build and install SciPy
+        run: |
+          spin build --gcov --with-scipy-openblas=32 --release
 
-    - name: Ccache performance
-      shell: bash -l {0}
-      run: |
-        ccache --evict-older-than 1d
-        ccache -s
+      - name: Ccache performance
+        shell: bash -l {0}
+        run: |
+          ccache --evict-older-than 1d
+          ccache -s
 
-    - name: Downgrade NumPy to lowest supported
-      run: |
-        python -m pip install "numpy==2.0.0"
+      - name: Downgrade NumPy to lowest supported
+        run: |
+          python -m pip install "numpy==2.0.0"
 
-    - name: Test SciPy
-      run: |
-        export OPENBLAS_NUM_THREADS=1
-        export SCIPY_ARRAY_API=1
-        spin test --no-build --coverage -j2 --mode full -- --cov --cov-report term-missing
+      - name: Test SciPy
+        run: |
+          export OPENBLAS_NUM_THREADS=1
+          export SCIPY_ARRAY_API=1
+          spin test --no-build --coverage -j2 --mode full -- --cov --cov-report term-missing
 
   #################################################################################
   linux_32bit:
     name: 32-bit, fast, py3.12/npMin, spin
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     # I tried running directly in a container:, using the image: and options:
     # entries. Unfortunately at this time options: does not seem to listen to
     # --platform linux/i386.
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: build + test in i686 container
-      run: |
-        set -exuo pipefail
-        docker pull quay.io/pypa/manylinux_2_28_i686
-        docker run -v "$(pwd):/scipy" --platform=linux/i386 quay.io/pypa/manylinux_2_28_i686 /bin/bash -c '
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: build + test in i686 container
+        run: |
           set -exuo pipefail
-          cd /scipy
-          uname -a
-          python3.12 -m venv test
-          source test/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install --group build --group dev-cli --group test-core --group openblas32
-          # we want `mpmath` but cannot install `gmpy2` on 32-bit,
-          # so cannot use `--group test-mp`
-          python -m pip install mpmath
-          python -m pip install numpy==2.0.0 -Cbuild-dir=numpy-builddir
-          python -c "import numpy as np; np.show_config()"
-          spin build --with-scipy-openblas=32
-          spin test
-        '
+          docker pull quay.io/pypa/manylinux_2_28_i686
+          docker run -v "$(pwd):/scipy" --platform=linux/i386 quay.io/pypa/manylinux_2_28_i686 /bin/bash -c '
+            set -exuo pipefail
+            cd /scipy
+            uname -a
+            python3.12 -m venv test
+            source test/bin/activate
+            python -m pip install --upgrade pip
+            python -m pip install --group build --group dev-cli --group test-core --group openblas32
+            # we want `mpmath` but cannot install `gmpy2` on 32-bit,
+            # so cannot use `--group test-mp`
+            python -m pip install mpmath
+            python -m pip install numpy==2.0.0 -Cbuild-dir=numpy-builddir
+            python -c "import numpy as np; np.show_config()"
+            spin build --with-scipy-openblas=32
+            spin test
+          '
 
   #################################################################################
   distro_multiple_pythons:
@@ -567,64 +553,63 @@ jobs:
     # build dependencies like Cython or NumPy installed.
     name: non-default Python interpreter, fast, py3.12/npMin, pip+pytest
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Setup system dependencies
-      uses: ./.github/apt-get
-      with:
-        repository: ppa:deadsnakes/ppa
-        packages: >-
-          python3.12-dev ninja-build pkg-config libatlas-base-dev liblapack-dev ccache
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Setup system dependencies
+        uses: ./.github/apt-get
+        with:
+          repository: ppa:deadsnakes/ppa
+          packages: >-
+            python3.12-dev ninja-build pkg-config libatlas-base-dev
+            liblapack-dev ccache
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}
 
-    - name: Setup Python build deps
-      run: |
-        python3.12 -m pip install --upgrade pip
-        python3.12 -m pip install build
-        python3.12 -m pip install --group build
+      - name: Setup Python build deps
+        run: |
+          python3.12 -m pip install --upgrade pip
+          python3.12 -m pip install build
+          python3.12 -m pip install --group build
 
-    - name: Build wheel and install
-      run: |
-        python3.12 -m build -wnx -Csetup-args=-Dblas=blas-atlas -Csetup-args=-Dlapack=lapack-atlas
-        python3.12 -m pip install dist/*.whl
+      - name: Build wheel and install
+        run: |
+          python3.12 -m build -wnx -Csetup-args=-Dblas=blas-atlas -Csetup-args=-Dlapack=lapack-atlas
+          python3.12 -m pip install dist/*.whl
 
-    - name: Ccache performance
-      shell: bash -l {0}
-      run: |
-        ccache --evict-older-than 1d
-        ccache -s
+      - name: Ccache performance
+        shell: bash -l {0}
+        run: |
+          ccache --evict-older-than 1d
+          ccache -s
 
-    - name: Install test dependencies
-      run: |
-        python3.12 -m pip install --group test-core
+      - name: Install test dependencies
+        run: |
+          python3.12 -m pip install --group test-core
 
-    - name: Run tests
-      run: |
-        # Just a small subset of tests; this will be fine if the build
-        # succeeds (that's the real purpose of this job)
-        pushd $RUNNER_TEMP
-        python3.12 -m pytest --pyargs scipy.cluster
-        python3.12 -m pytest --pyargs scipy.linalg
-        popd
+      - name: Run tests
+        run: |
+          # Just a small subset of tests; this will be fine if the build
+          # succeeds (that's the real purpose of this job)
+          pushd $RUNNER_TEMP
+          python3.12 -m pytest --pyargs scipy.cluster
+          python3.12 -m pytest --pyargs scipy.linalg
+          popd
 
   #################################################################################
   meson_global_install:
@@ -634,130 +619,126 @@ jobs:
     # sometimes being used that way - see gh-20535 and gh-24406
     name: build with global meson
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        fetch-tags: true
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-tags: true
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - name: Install system dependencies
-      uses: ./.github/apt-get
-      with:
-        packages: pkg-config libopenblas-dev liblapack-dev ccache
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - name: Install system dependencies
+        uses: ./.github/apt-get
+        with:
+          packages: pkg-config libopenblas-dev liblapack-dev ccache
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}
 
-    - name: Install global meson
-      run: |
-        python -m pip install meson --break-system-packages
+      - name: Install global meson
+        run: |
+          python -m pip install meson --break-system-packages
 
-    - name: Setup Python
-      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97   # v7.0.0
-      with:
-        python-version: '3.14'
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
 
-    - name: Setup Python build/test deps
-      run: |
-        python -m pip install --group build --group test-core --group openblas32
-        python -m pip install build
-        # Remove `meson` from environment
-        python -m pip uninstall meson --yes
+      - name: Setup Python build/test deps
+        run: |
+          python -m pip install --group build --group test-core --group openblas32
+          python -m pip install build
+          # Remove `meson` from environment
+          python -m pip uninstall meson --yes
 
-    - name: Check we're using global Meson
-      run: |
-        which meson
+      - name: Check we're using global Meson
+        run: |
+          which meson
 
-    - name: Build wheel and install
-      run: |
-        python -m build -wnx
-        python -m pip install dist/*.whl
+      - name: Build wheel and install
+        run: |
+          python -m build -wnx
+          python -m pip install dist/*.whl
 
-    - name: Ccache performance
-      shell: bash -l {0}
-      run: |
-        ccache --evict-older-than 1d
-        ccache -s
+      - name: Ccache performance
+        shell: bash -l {0}
+        run: |
+          ccache --evict-older-than 1d
+          ccache -s
 
-    - name: Run tests
-      run: |
-        # Just a small subset of tests; this will be fine if the build
-        # succeeds (that's the real purpose of this job)
-        pushd $RUNNER_TEMP
-        python -m pytest --pyargs scipy.linalg
-        popd
+      - name: Run tests
+        run: |
+          # Just a small subset of tests; this will be fine if the build
+          # succeeds (that's the real purpose of this job)
+          pushd $RUNNER_TEMP
+          python -m pytest --pyargs scipy.linalg
+          popd
 
   #################################################################################
   free-threaded:
     name: free-threaded${{ matrix.parallel == '1' && ' (pytest-run-parallel)' ||
       '' }}
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
+      - get_commit_message
+      - alpha_bridge_inputs
     strategy:
       matrix:
-        parallel: ['0', '1']
+        parallel: ["0", "1"]
       fail-fast: false
 
     runs-on: ubuntu-latest
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        fetch-tags: true
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-tags: true
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e   # v0.10.2
-      with:
-        pixi-version: v0.71.0
-        cache: false
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.71.0
+          cache: false
 
-    - name: Set up ccache
-      uses: ./.github/ccache
-      with:
-        workflow_name: ${{ github.workflow }}
-        job_name: ${{ github.job }}
+      - name: Set up ccache
+        uses: ./.github/ccache
+        with:
+          workflow_name: ${{ github.workflow }}
+          job_name: ${{ github.job }}
           # the two matrix variants build the same thing, avoid saving twice
-        save: ${{ matrix.parallel == '0' }}
+          save: ${{ matrix.parallel == '0' }}
 
-    - name: Run tests (full)
-      if: ${{ matrix.parallel == '0'}}
-      run: |-
-        pixi run test-freethreading -j4 -m full --durations=10
-
-
-    - name: Run tests (fast, with pytest-run-parallel)
-      if: ${{ matrix.parallel == '1'}}
-      run: |-
-        pixi run test-parallel-freethreading
+      - name: Run tests (full)
+        if: ${{ matrix.parallel == '0'}}
+        run: |-
+          pixi run test-freethreading -j4 -m full --durations=10
 
 
-    - name: Ccache performance
-      shell: bash -l {0}
-      run: |
-        pixi exec ccache --evict-older-than 1d
-        pixi exec ccache -s
+      - name: Run tests (fast, with pytest-run-parallel)
+        if: ${{ matrix.parallel == '1'}}
+        run: |-
+          pixi run test-parallel-freethreading
+
+
+      - name: Ccache performance
+        shell: bash -l {0}
+        run: |
+          pixi exec ccache --evict-older-than 1d
+          pixi exec ccache -s
 
   #################################################################################
   clang-23-build-only:
@@ -765,30 +746,28 @@ jobs:
     # We do not run the test suite here.
     name: Clang-23 aarch build-only (-Werror)
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-24.04-arm
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e   # v0.10.2
-      with:
-        pixi-version: v0.71.0
-        cache: false
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.71.0
+          cache: false
 
-    - name: Build wheel, check for compiler warnings
-      run: |-
-        pixi run build-clang-23
+      - name: Build wheel, check for compiler warnings
+        run: |-
+          pixi run build-clang-23
 
 
   #################################################################################
@@ -798,30 +777,28 @@ jobs:
     # fast test suite. This is that job. See gh-20806 for previous issues
     # after running this job on Windows and in multiple jobs.
     needs:
-    - get_commit_message
-    - alpha_bridge_inputs
-    if: >-
-      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository ==
-      'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed
-      == 'true' }}
+      - get_commit_message
+      - alpha_bridge_inputs
+    if: |-
+      ${{ (needs.get_commit_message.outputs.message == 1 && (github.repository == 'scipy/scipy' || github.repository == '')) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
     runs-on: ubuntu-24.04-arm
     steps:
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1   # v7.0.1
-      with:
-        submodules: recursive
-        persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
 
-        ref: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-    - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e   # v0.10.2
-      with:
-        pixi-version: v0.71.0
-        cache: false
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+      - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+        with:
+          pixi-version: v0.71.0
+          cache: false
 
-    - name: Test SciPy
-      run: |
-        pixi run test-fail-slow
+      - name: Test SciPy
+        run: |
+          pixi run test-fail-slow
   alpha_bridge_inputs:
     name: CI input check
     runs-on: ubuntu-latest
@@ -835,115 +812,116 @@ jobs:
     outputs:
       changed: ${{ steps.identity.outputs.changed }}
     steps:
-    - id: identity
-      name: Check source, workflow, variables, and runner inputs
-      env:
-        GH_TOKEN: ${{ github.token }}
-        AB_REPOSITORY: ${{ github.repository }}
-        AB_RUN_ID: ${{ github.run_id }}
-        AB_HEAD_SHA: ${{ (github.event_name == 'schedule' || github.event_name 
-          == 'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-        AB_REF: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'refs/heads/main' || github.ref }}
-        AB_WORKFLOW_DIGEST: 
-          c602076d862e9eb7aba6edda474e3b7e7f617f9498f50a2b5b27a3c0df4e6fcb
-        AB_EVENT: ${{ github.event_name }}
-        AB_SCHEDULE: ${{ github.event.schedule || '' }}
-        AB_VARIABLES: ${{ toJSON(vars) }}
-        AB_INPUTS: ${{ toJSON(inputs) }}
-        AB_WORKFLOW_RUN: ${{ toJSON(github.event.workflow_run) }}
-      shell: bash
-      run: "python3 - <<'ALPHA_BRIDGE_CI_PY'\n\"\"\"Native automatic-CI input check,
-        embedded in the owned fork configuration.\"\"\"\n\nfrom __future__ import
-        annotations\n\nimport base64\nimport hashlib\nimport json\nimport os\nimport
-        re\nimport urllib.parse\nimport urllib.request\n\nINPUT_CHECK_NAMES = (\"\
-        CI input check\", \"AlphaBridge input check\")\nINPUT_IDENTITY_PREFIXES =
-        (\"CI input identity \", \"AlphaBridge input identity \")\n\n\ndef input_identity(job):\n\
-        \    for step in job.get(\"steps\", []):\n        if step.get(\"conclusion\"\
-        ) != \"success\":\n            continue\n        name = step.get(\"name\"\
-        , \"\")\n        for prefix in INPUT_IDENTITY_PREFIXES:\n            if name.startswith(prefix):\n\
-        \                identity = name.removeprefix(prefix)\n                if
-        re.fullmatch(r\"[0-9a-f]{64}\", identity):\n                    return identity\n\
-        \    return \"\"\n\n\ndef parent_has_work(get, repository, parent):\n    if
-        (\n        not parent\n        or parent.get(\"head_branch\") != \"alpha-bridge-ci\"\
-        \n        or parent.get(\"status\") != \"completed\"\n    ):\n        return
-        True\n    sha = parent[\"head_sha\"]\n    if re.fullmatch(r\"[0-9a-f]{40}\"\
-        , sha) is None:\n        raise ValueError(\"parent workflow has no exact configuration
-        commit\")\n    record = get(f\"/repos/{repository}\")\n    marker_file = get(f\"\
-        /repos/{repository}/contents/.github/alpha-bridge-ci.json?ref={sha}\")\n \
-        \   marker = json.loads(base64.b64decode(marker_file[\"content\"]))\n    if
-        (\n        record.get(\"fork\") is not True\n        or marker.get(\"schema\"\
-        ) != \"alpha-bridge/fork-ci\"\n        or marker.get(\"source_repository\"\
-        ) != record.get(\"parent\", {}).get(\"full_name\")\n    ):\n        raise
-        ValueError(\"parent CI configuration has no verified fork ownership\")\n \
-        \   path = parent[\"path\"].split(\"@\", 1)[0]\n    if not path.startswith(\"\
-        .github/workflows/\") or \"/\" in path.removeprefix(\".github/workflows/\"\
-        ):\n        raise ValueError(\"parent workflow path is outside its configuration
-        owner\")\n    definition = get(f\"/repos/{repository}/contents/{urllib.parse.quote(path,
-        safe='/')}?ref={sha}\")\n    if hashlib.sha256(base64.b64decode(definition[\"\
-        content\"])).hexdigest() != marker.get(\n        \"definition_sha256\", {}\n\
-        \    ).get(path):\n        raise ValueError(\"parent workflow differs from
-        its owned definition\")\n    if path == \".github/workflows/alpha-bridge-ci-verify.yml\"\
-        :\n        return False\n    jobs = []\n    page = 1\n    while True:\n  \
-        \      values = get(\n            f\"/repos/{repository}/actions/runs/{parent['id']}/jobs?per_page=100&page={page}\"\
-        \n        )[\"jobs\"]\n        jobs.extend(values)\n        if len(values)
-        < 100:\n            break\n        page += 1\n    guards = [\n        job\n\
-        \        for job in jobs\n        if job.get(\"name\") in INPUT_CHECK_NAMES\n\
-        \        and job.get(\"conclusion\") == \"success\"\n        and input_identity(job)\n\
-        \    ]\n    return not guards or any(\n        job not in guards and job.get(\"\
-        conclusion\") != \"skipped\" for job in jobs\n    )\n\n\ndef changed(get,
-        *, repository, run_id, identity, job_name):\n    current = get(f\"/repos/{repository}/actions/runs/{run_id}\"\
-        )\n    event = current[\"event\"]\n    page = 1\n    while True:\n       \
-        \ # Filter locally: GitHub caps filtered searches at 1,000 results.\n    \
-        \    query = urllib.parse.urlencode({\"per_page\": 100, \"page\": page})\n\
-        \        runs = get(f\"/repos/{repository}/actions/workflows/{current['workflow_id']}/runs?{query}\"\
-        )\n        for run in runs[\"workflow_runs\"]:\n            if run[\"id\"\
-        ] == run_id:\n                continue\n            if run.get(\"head_branch\"\
-        ) != current[\"head_branch\"] or run.get(\"event\") != event:\n          \
-        \      continue\n            job_page = 1\n            while True:\n     \
-        \           jobs = get(\n                    f\"/repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100&page={job_page}\"\
-        \n                )[\"jobs\"]\n                for job in jobs:\n        \
-        \            if (\n                        (\n                           \
-        \ job[\"name\"] in INPUT_CHECK_NAMES\n                            if job_name
-        in INPUT_CHECK_NAMES\n                            else job[\"name\"] == job_name\n\
-        \                        )\n                        and job.get(\"status\"\
-        ) == \"completed\"\n                        and job.get(\"conclusion\") ==
-        \"success\"\n                        and input_identity(job) == identity\n\
-        \                    ):\n                        return False\n          \
-        \      if len(jobs) < 100:\n                    break\n                job_page
-        += 1\n        if len(runs[\"workflow_runs\"]) < 100:\n            return True\n\
-        \        page += 1\n\n\ndef main():\n    event = os.environ[\"AB_EVENT\"]\n\
-        \    event_payload = None\n    if event not in {\"schedule\", \"workflow_run\"\
-        }:\n        with open(os.environ[\"GITHUB_EVENT_PATH\"], encoding=\"utf-8\"\
-        ) as payload_file:\n            event_payload = json.load(payload_file)\n\
-        \    inputs = {\n        \"source_commit\": os.environ[\"AB_HEAD_SHA\"],\n\
-        \        \"source_ref\": os.environ[\"AB_REF\"],\n        \"workflow_definition\"\
-        : os.environ[\"AB_WORKFLOW_DIGEST\"],\n        \"event\": event,\n       \
-        \ \"event_payload\": event_payload,\n        \"schedule\": os.environ[\"AB_SCHEDULE\"\
-        ],\n        \"variables\": json.loads(os.environ[\"AB_VARIABLES\"]),\n   \
-        \     \"inputs\": json.loads(os.environ[\"AB_INPUTS\"]),\n        \"runner_image\"\
-        : [os.environ.get(\"ImageOS\", \"\"), os.environ.get(\"ImageVersion\", \"\"\
-        )],\n        \"producer\": json.loads(os.environ.get(\"AB_WORKFLOW_RUN\",
-        \"null\")),\n    }\n    identity = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()\n\
-        \n    def get(path):\n        request = urllib.request.Request(\n        \
-        \    \"https://api.github.com\" + path,\n            headers={\n         \
-        \       \"Authorization\": \"Bearer \" + os.environ[\"GH_TOKEN\"],\n     \
-        \           \"Accept\": \"application/vnd.github+json\",\n               \
-        \ \"X-GitHub-Api-Version\": \"2026-03-10\",\n            },\n        )\n \
-        \       with urllib.request.urlopen(request, timeout=60) as response:\n  \
-        \          return json.load(response)\n\n    manual = event == \"workflow_dispatch\"\
-        \ or int(os.environ[\"GITHUB_RUN_ATTEMPT\"]) > 1\n    should_run = manual
-        or (\n        (\n            inputs[\"event\"] != \"workflow_run\"\n     \
-        \       or parent_has_work(get, os.environ[\"AB_REPOSITORY\"], inputs[\"producer\"\
-        ])\n        )\n        and changed(\n            get,\n            repository=os.environ[\"\
-        AB_REPOSITORY\"],\n            run_id=int(os.environ[\"AB_RUN_ID\"]),\n  \
-        \          identity=identity,\n            job_name=\"CI input check\",\n\
-        \        )\n    )\n    with open(os.environ[\"GITHUB_OUTPUT\"], \"a\", encoding=\"\
-        utf-8\") as output:\n        output.write(f\"digest={identity}\\nchanged={str(should_run).lower()}\\\
-        n\")\n    print(\n        \"Explicit CI run requested\"\n        if manual\n\
-        \        else \"CI inputs changed\"\n        if should_run\n        else \"\
-        CI inputs unchanged; build and test jobs skipped\"\n    )\n\n\nif __name__
-        == \"__main__\":\n    main()\n\nALPHA_BRIDGE_CI_PY\n"
-    - name: CI input identity ${{ steps.identity.outputs.digest }}
-      run: echo 'Input identity recorded'
+      - id: identity
+        name: Check source, workflow, variables, and runner inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AB_REPOSITORY: ${{ github.repository }}
+          AB_RUN_ID: ${{ github.run_id }}
+          AB_HEAD_SHA: ${{ (github.event_name == 'schedule' || github.event_name
+            == 'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
+            github.sha }}
+          AB_REF: ${{ (github.event_name == 'schedule' || github.event_name == 
+            'workflow_run') && 'refs/heads/main' || github.ref }}
+          AB_WORKFLOW_DIGEST: 
+            f39ff6e9b21632fe984dffee5a87af478013a13867d0fab3596d45b22321b0d7
+          AB_EVENT: ${{ github.event_name }}
+          AB_SCHEDULE: ${{ github.event.schedule || '' }}
+          AB_VARIABLES: ${{ toJSON(vars) }}
+          AB_INPUTS: ${{ toJSON(inputs) }}
+          AB_WORKFLOW_RUN: ${{ toJSON(github.event.workflow_run) }}
+        shell: bash
+        run: "python3 - <<'ALPHA_BRIDGE_CI_PY'\n\"\"\"Native automatic-CI input check,
+          embedded in the owned fork configuration.\"\"\"\n\nfrom __future__ import
+          annotations\n\nimport base64\nimport hashlib\nimport json\nimport os\nimport
+          re\nimport urllib.parse\nimport urllib.request\n\nINPUT_CHECK_NAMES = (\"\
+          CI input check\", \"AlphaBridge input check\")\nINPUT_IDENTITY_PREFIXES
+          = (\"CI input identity \", \"AlphaBridge input identity \")\n\n\ndef input_identity(job):\n\
+          \    for step in job.get(\"steps\", []):\n        if step.get(\"conclusion\"\
+          ) != \"success\":\n            continue\n        name = step.get(\"name\"\
+          , \"\")\n        for prefix in INPUT_IDENTITY_PREFIXES:\n            if
+          name.startswith(prefix):\n                identity = name.removeprefix(prefix)\n\
+          \                if re.fullmatch(r\"[0-9a-f]{64}\", identity):\n       \
+          \             return identity\n    return \"\"\n\n\ndef parent_has_work(get,
+          repository, parent):\n    if (\n        not parent\n        or parent.get(\"\
+          head_branch\") != \"alpha-bridge-ci\"\n        or parent.get(\"status\"\
+          ) != \"completed\"\n    ):\n        return True\n    sha = parent[\"head_sha\"\
+          ]\n    if re.fullmatch(r\"[0-9a-f]{40}\", sha) is None:\n        raise ValueError(\"\
+          parent workflow has no exact configuration commit\")\n    record = get(f\"\
+          /repos/{repository}\")\n    marker_file = get(f\"/repos/{repository}/contents/.github/alpha-bridge-ci.json?ref={sha}\"\
+          )\n    marker = json.loads(base64.b64decode(marker_file[\"content\"]))\n\
+          \    if (\n        record.get(\"fork\") is not True\n        or marker.get(\"\
+          schema\") != \"alpha-bridge/fork-ci\"\n        or marker.get(\"source_repository\"\
+          ) != record.get(\"parent\", {}).get(\"full_name\")\n    ):\n        raise
+          ValueError(\"parent CI configuration has no verified fork ownership\")\n\
+          \    path = parent[\"path\"].split(\"@\", 1)[0]\n    if not path.startswith(\"\
+          .github/workflows/\") or \"/\" in path.removeprefix(\".github/workflows/\"\
+          ):\n        raise ValueError(\"parent workflow path is outside its configuration
+          owner\")\n    definition = get(f\"/repos/{repository}/contents/{urllib.parse.quote(path,
+          safe='/')}?ref={sha}\")\n    if hashlib.sha256(base64.b64decode(definition[\"\
+          content\"])).hexdigest() != marker.get(\n        \"definition_sha256\",
+          {}\n    ).get(path):\n        raise ValueError(\"parent workflow differs
+          from its owned definition\")\n    if path == \".github/workflows/alpha-bridge-ci-verify.yml\"\
+          :\n        return False\n    jobs = []\n    page = 1\n    while True:\n\
+          \        values = get(\n            f\"/repos/{repository}/actions/runs/{parent['id']}/jobs?per_page=100&page={page}\"\
+          \n        )[\"jobs\"]\n        jobs.extend(values)\n        if len(values)
+          < 100:\n            break\n        page += 1\n    guards = [\n        job\n\
+          \        for job in jobs\n        if job.get(\"name\") in INPUT_CHECK_NAMES\n\
+          \        and job.get(\"conclusion\") == \"success\"\n        and input_identity(job)\n\
+          \    ]\n    return not guards or any(\n        job not in guards and job.get(\"\
+          conclusion\") != \"skipped\" for job in jobs\n    )\n\n\ndef changed(get,
+          *, repository, run_id, identity, job_name):\n    current = get(f\"/repos/{repository}/actions/runs/{run_id}\"\
+          )\n    event = current[\"event\"]\n    page = 1\n    while True:\n     \
+          \   # Filter locally: GitHub caps filtered searches at 1,000 results.\n\
+          \        query = urllib.parse.urlencode({\"per_page\": 100, \"page\": page})\n\
+          \        runs = get(f\"/repos/{repository}/actions/workflows/{current['workflow_id']}/runs?{query}\"\
+          )\n        for run in runs[\"workflow_runs\"]:\n            if run[\"id\"\
+          ] == run_id:\n                continue\n            if run.get(\"head_branch\"\
+          ) != current[\"head_branch\"] or run.get(\"event\") != event:\n        \
+          \        continue\n            job_page = 1\n            while True:\n \
+          \               jobs = get(\n                    f\"/repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100&page={job_page}\"\
+          \n                )[\"jobs\"]\n                for job in jobs:\n      \
+          \              if (\n                        (\n                       \
+          \     job[\"name\"] in INPUT_CHECK_NAMES\n                            if
+          job_name in INPUT_CHECK_NAMES\n                            else job[\"name\"\
+          ] == job_name\n                        )\n                        and job.get(\"\
+          status\") == \"completed\"\n                        and job.get(\"conclusion\"\
+          ) == \"success\"\n                        and input_identity(job) == identity\n\
+          \                    ):\n                        return False\n        \
+          \        if len(jobs) < 100:\n                    break\n              \
+          \  job_page += 1\n        if len(runs[\"workflow_runs\"]) < 100:\n     \
+          \       return True\n        page += 1\n\n\ndef main():\n    event = os.environ[\"\
+          AB_EVENT\"]\n    event_payload = None\n    if event not in {\"schedule\"\
+          , \"workflow_run\"}:\n        with open(os.environ[\"GITHUB_EVENT_PATH\"\
+          ], encoding=\"utf-8\") as payload_file:\n            event_payload = json.load(payload_file)\n\
+          \    inputs = {\n        \"source_commit\": os.environ[\"AB_HEAD_SHA\"],\n\
+          \        \"source_ref\": os.environ[\"AB_REF\"],\n        \"workflow_definition\"\
+          : os.environ[\"AB_WORKFLOW_DIGEST\"],\n        \"event\": event,\n     \
+          \   \"event_payload\": event_payload,\n        \"schedule\": os.environ[\"\
+          AB_SCHEDULE\"],\n        \"variables\": json.loads(os.environ[\"AB_VARIABLES\"\
+          ]),\n        \"inputs\": json.loads(os.environ[\"AB_INPUTS\"]),\n      \
+          \  \"runner_image\": [os.environ.get(\"ImageOS\", \"\"), os.environ.get(\"\
+          ImageVersion\", \"\")],\n        \"producer\": json.loads(os.environ.get(\"\
+          AB_WORKFLOW_RUN\", \"null\")),\n    }\n    identity = hashlib.sha256(json.dumps(inputs,
+          sort_keys=True).encode()).hexdigest()\n\n    def get(path):\n        request
+          = urllib.request.Request(\n            \"https://api.github.com\" + path,\n\
+          \            headers={\n                \"Authorization\": \"Bearer \" +
+          os.environ[\"GH_TOKEN\"],\n                \"Accept\": \"application/vnd.github+json\"\
+          ,\n                \"X-GitHub-Api-Version\": \"2026-03-10\",\n         \
+          \   },\n        )\n        with urllib.request.urlopen(request, timeout=60)
+          as response:\n            return json.load(response)\n\n    manual = event
+          == \"workflow_dispatch\" or int(os.environ[\"GITHUB_RUN_ATTEMPT\"]) > 1\n\
+          \    should_run = manual or (\n        (\n            inputs[\"event\"]
+          != \"workflow_run\"\n            or parent_has_work(get, os.environ[\"AB_REPOSITORY\"\
+          ], inputs[\"producer\"])\n        )\n        and changed(\n            get,\n\
+          \            repository=os.environ[\"AB_REPOSITORY\"],\n            run_id=int(os.environ[\"\
+          AB_RUN_ID\"]),\n            identity=identity,\n            job_name=\"\
+          CI input check\",\n        )\n    )\n    with open(os.environ[\"GITHUB_OUTPUT\"\
+          ], \"a\", encoding=\"utf-8\") as output:\n        output.write(f\"digest={identity}\\\
+          nchanged={str(should_run).lower()}\\n\")\n    print(\n        \"Explicit
+          CI run requested\"\n        if manual\n        else \"CI inputs changed\"\
+          \n        if should_run\n        else \"CI inputs unchanged; build and test
+          jobs skipped\"\n    )\n\n\nif __name__ == \"__main__\":\n    main()\n\n\
+          ALPHA_BRIDGE_CI_PY\n"
+      - name: CI input identity ${{ steps.identity.outputs.digest }}
+        run: echo 'Input identity recorded'

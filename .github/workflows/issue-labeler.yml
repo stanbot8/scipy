@@ -1,4 +1,4 @@
-name: Issue Labeler
+name: "Issue Labeler"
 on:
   issues:
     types: [opened]
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   label_issue:
-    name: Label Issue
+    name: "Label Issue"
     # Permissions needed for labelling issues automatically
     # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
     permissions:
@@ -33,8 +33,8 @@ jobs:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
     needs:
     - alpha_bridge_inputs
-    if: ${{ (success()) && needs.alpha_bridge_inputs.outputs.changed == 'true' 
-      }}
+    if: |-
+      ${{ (success()) && needs.alpha_bridge_inputs.outputs.changed == 'true' }}
   alpha_bridge_inputs:
     name: CI input check
     runs-on: ubuntu-latest
@@ -60,7 +60,7 @@ jobs:
         AB_REF: ${{ (github.event_name == 'schedule' || github.event_name == 
           'workflow_run') && 'refs/heads/main' || github.ref }}
         AB_WORKFLOW_DIGEST: 
-          0948139bd7ca7552269cf11593e2e7e7b06cbe91c66dbcd5a3636fe4b98aa27f
+          16c234ad1d4c7e3894dca06b9cfaad6ebd24fffa5b03025f74b5b1be86f489dd
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}
