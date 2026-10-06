@@ -1,36 +1,18 @@
-name: "Issue Labeler"
+name: CI input consumer
 on:
-  issues:
-    types: [opened]
-
-permissions: {}
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || 
-    ((github.event_name == 'schedule' || github.event_name == 'workflow_run') &&
-    'refs/heads/main' || github.ref) }}
-  cancel-in-progress: ${{ (github.event_name == 'workflow_dispatch' || 
-    github.run_attempt > 1) && (true) }}
-
+  workflow_call:
+    inputs:
+      probe:
+        type: string
+        required: true
+      slot:
+        type: string
+        required: true
 jobs:
-  label_issue:
-    name: "Label Issue"
-    # Permissions needed for labelling issues automatically
-    # https://docs.github.com/en/actions/security-guides/automatic-token-authentication
-    permissions:
-      contents: read
-      issues: write  # needed to apply label
+  check:
     runs-on: ubuntu-latest
     steps:
-    # label based on issue title
-    - uses: github/issue-labeler@ccca1e16fcb66762200e616fc29b57b940c1cb67 # v3.5
-      if: github.repository == 'scipy/scipy'
-      with:
-        configuration-path: .github/label-title.yml
-        include-title: 1
-        include-body: 0
-        enable-versioned-regex: 0
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - run: echo 'Changed inputs reached consumer ${{ inputs.slot }}'
     needs:
     - alpha_bridge_inputs
     if: |-
@@ -42,7 +24,7 @@ jobs:
       actions: read
       contents: read
     concurrency:
-      group: alpha-bridge-inputs-26cca1d19de4bb94-${{ github.workflow }}-${{ 
+      group: alpha-bridge-inputs-04fbff4179fd2373-${{ github.workflow }}-${{ 
         github.sha }}-${{ github.event.schedule || github.event_name }}
       cancel-in-progress: false
       queue: max
@@ -55,13 +37,10 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         AB_REPOSITORY: ${{ github.repository }}
         AB_RUN_ID: ${{ github.run_id }}
-        AB_HEAD_SHA: ${{ (github.event_name == 'schedule' || github.event_name 
-          == 'workflow_run') && 'c251b02724d0e20e298172e0df403c1dae4f6642' || 
-          github.sha }}
-        AB_REF: ${{ (github.event_name == 'schedule' || github.event_name == 
-          'workflow_run') && 'refs/heads/main' || github.ref }}
+        AB_HEAD_SHA: ${{ github.sha }}
+        AB_REF: ${{ github.ref }}
         AB_WORKFLOW_DIGEST: 
-          998a6e42fdddf70087f180bc93a9aa6b39b97a550d09916b1d9af7c4532d81ec
+          204202fd1f1fa08793779bf1cda80736b14fcfc47bf1262b68cdcee1a843ad8c
         AB_EVENT: ${{ github.event_name }}
         AB_SCHEDULE: ${{ github.event.schedule || '' }}
         AB_VARIABLES: ${{ toJSON(vars) }}
